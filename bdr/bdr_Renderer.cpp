@@ -1335,11 +1335,17 @@ bdr::Renderer::~Renderer()
 
 	this->DeleteSwapChain();
 
-	for( uint i = 0; i < MaximumConcurrentRenderFrames; i++ )
+	for( auto v : this->RenderFinishedSemaphores )
 		{
-		vkDestroySemaphore( this->Device, this->RenderFinishedSemaphores[i], nullptr );
-		vkDestroySemaphore( this->Device, this->ImageAvailableSemaphores[i], nullptr );
-		vkDestroyFence( this->Device, this->InFlightFences[i], nullptr );
+		vkDestroySemaphore( this->Device, v, nullptr );
+		}
+	for( auto v : this->ImageAvailableSemaphores )
+		{
+		vkDestroySemaphore( this->Device, v, nullptr );
+		}
+	for( auto v : this->InFlightFences )
+		{
+		vkDestroyFence( this->Device, v, nullptr );
 		}
 
 	if( this->InternalCommandPool != nullptr )

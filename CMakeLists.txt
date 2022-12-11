@@ -3,20 +3,6 @@ include(FetchContent)
 
 project( bashers-delight )
 
-# lots of warnings and all warnings as errors
-if (MSVC)
-    add_compile_options(/W4 /WX)
-else()
-    add_compile_options(-Wall -Wextra -pedantic -Werror)
-endif()
-
-# big object files
-if (MSVC)
-  add_compile_options(/bigobj)
-else ()
-  add_compile_options(-Wa,-mbig-obj)
-endif ()
-
 # dependendices
 
 # Vulkan SDK needs to be installed
@@ -41,14 +27,26 @@ FetchContent_MakeAvailable( vma )
 # build test if this is the main cmake file
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)			
 				
-	# dowload gtest
+	# dowload googletest
 	FetchContent_Declare(
 	  googletest
 	  GIT_REPOSITORY 	https://github.com/google/googletest.git
-	  GIT_TAG			58d77fa8070e8cec2dc1ed015d66b454c8d78850
+	  GIT_TAG			58d77fa8070e8cec2dc1ed015d66b454c8d78850 # 1.12.1 
 	)
 	FetchContent_MakeAvailable(googletest)			
 		
+	# glfw
+	set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+	set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+	set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+	set(GLFW_INCLUDE_VULKAN ON CACHE BOOL "" FORCE)
+	FetchContent_Declare(
+	  glfw
+	  GIT_REPOSITORY 	https://github.com/glfw/glfw.git
+	  GIT_TAG			7482de6071d21db77a7236155da44c172a7f6c9e # 3.3.8
+	)
+	FetchContent_MakeAvailable(glfw)			
+				
 	add_executable( 
 		SystemTest
 		./bdr/bdr_Buffer.cpp
@@ -78,10 +76,26 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		./tests/SystemTest.cpp 
 	)	
 
+	# lots of warnings and all warnings as errors
+	if (MSVC)
+		target_compile_options( SystemTest PUBLIC /W4 /WX)
+	else()
+		target_compile_options( SystemTest PUBLIC -Wall -Wextra -pedantic -Werror)
+	endif()
+
+	# big object files
+	if (MSVC)
+	  target_compile_options( SystemTest PUBLIC /bigobj)
+	else ()
+	  target_compile_options( SystemTest PUBLIC -Wa,-mbig-obj)
+	endif ()
+
 	target_include_directories(	
 		SystemTest 
+		PUBLIC .
 		PUBLIC ${glm_SOURCE_DIR}
 		PUBLIC ${vma_SOURCE_DIR}/include
+		PUBLIC ${glfw_SOURCE_DIR}/include
 		PUBLIC ${Vulkan_INCLUDE_DIR}
 	)
 
@@ -89,6 +103,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		SystemTest 
 		Rpcrt4
 		${Vulkan_LIBRARIES}
+		glfw
 	)
 
 endif()

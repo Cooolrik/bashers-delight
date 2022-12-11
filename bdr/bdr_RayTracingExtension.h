@@ -31,7 +31,7 @@ namespace bdr
             VkPhysicalDeviceRayTracingPipelinePropertiesKHR RayTracingPipelineProperties{};
 
             std::vector<RayTracingAccelerationStructure*> BLASes;
-            RayTracingAccelerationStructure* TLAS;
+            RayTracingAccelerationStructure *TLAS{};
 
             std::set<RayTracingPipeline*> RayTracingPipelines;
             void RemoveRayTracingPipeline( RayTracingPipeline* pipeline );
