@@ -39,7 +39,7 @@ void run()
 	createParameters.NeededExtensions = glfwExtensions;
 	createParameters.DebugMessageCallback = &debugCallback;
 	createParameters.DebugMessageSeverityMask =
-		VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
+		//VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
 		VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
 		VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 	createParameters.DebugMessageTypeMask =

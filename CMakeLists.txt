@@ -27,7 +27,7 @@ FetchContent_MakeAvailable( vma )
 # build test if this is the main cmake file
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)			
 				
-	# dowload googletest
+	# googletest
 	FetchContent_Declare(
 	  googletest
 	  GIT_REPOSITORY 	https://github.com/google/googletest.git
@@ -46,33 +46,81 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 	  GIT_TAG			7482de6071d21db77a7236155da44c172a7f6c9e # 3.3.8
 	)
 	FetchContent_MakeAvailable(glfw)			
-				
+		
+	# macro which groups files by their file folder 
+	macro( source_group_by_folder rootPath projectFolder )
+	  file( REAL_PATH ${rootPath} rootAbs )
+	  foreach( file ${ARGN} )
+		file( REAL_PATH ${file} fileAbs )
+		file(RELATIVE_PATH relative_file ${rootAbs} ${fileAbs} )
+		get_filename_component(dir "${relative_file}" DIRECTORY )
+		source_group("${projectFolder}/${dir}" FILES ${file})
+	  endforeach()
+	endmacro()
+	
+	# source files in bdr
+	set(
+		bdr_files
+		./bdr/bdr_Buffer.cpp
+		./bdr/bdr_Buffer.h
+		./bdr/bdr_BufferDeviceAddressExtension.cpp
+		./bdr/bdr_BufferDeviceAddressExtension.h
+		./bdr/bdr_CommandPool.cpp
+		./bdr/bdr_CommandPool.h
+		./bdr/bdr_Common.inl
+		./bdr/bdr_ComputePipeline.cpp
+		./bdr/bdr_ComputePipeline.h
+		./bdr/bdr_DescriptorIndexingExtension.cpp
+		./bdr/bdr_DescriptorIndexingExtension.h
+		./bdr/bdr_DescriptorPool.cpp
+		./bdr/bdr_DescriptorPool.h
+		./bdr/bdr_DescriptorSetLayout.cpp
+		./bdr/bdr_DescriptorSetLayout.h
+		./bdr/bdr_Extension.cpp
+		./bdr/bdr_Extension.h
+		./bdr/bdr_GraphicsPipeline.cpp
+		./bdr/bdr_GraphicsPipeline.h
+		./bdr/bdr_Helpers.cpp
+		./bdr/bdr_Helpers.h
+		./bdr/bdr_Image.cpp
+		./bdr/bdr_Image.h
+		./bdr/bdr_IndexBuffer.cpp
+		./bdr/bdr_IndexBuffer.h
+		./bdr/bdr_Pipeline.cpp
+		./bdr/bdr_Pipeline.h
+		./bdr/Extensions/bdr_RayTracingAccelerationStructure.cpp
+		./bdr/Extensions/bdr_RayTracingAccelerationStructure.h
+		./bdr/Extensions/bdr_RayTracingBLASEntry.cpp
+		./bdr/Extensions/bdr_RayTracingBLASEntry.h
+		./bdr/Extensions/bdr_RayTracingExtension.cpp
+		./bdr/Extensions/bdr_RayTracingExtension.h
+		./bdr/Extensions/bdr_RayTracingPipeline.cpp
+		./bdr/Extensions/bdr_RayTracingPipeline.h
+		./bdr/Extensions/bdr_RayTracingShaderBindingTable.cpp
+		./bdr/Extensions/bdr_RayTracingShaderBindingTable.h
+		./bdr/Extensions/bdr_RayTracingTLASEntry.cpp
+		./bdr/Extensions/bdr_RayTracingTLASEntry.h
+		./bdr/bdr_Renderer.cpp
+		./bdr/bdr_Renderer.h
+		./bdr/bdr_Sampler.cpp
+		./bdr/bdr_Sampler.h
+		./bdr/bdr_ShaderModule.cpp
+		./bdr/bdr_ShaderModule.h
+		./bdr/bdr_VertexBuffer.cpp
+		./bdr/bdr_VertexBuffer.h
+		./bdr/bdr_vma_implementation.cpp		
+		)
+		
+	source_group_by_folder( ./bdr bdr ${bdr_files} )			
+	source_group_by_folder( ./tests tests ./tests/SystemTest.cpp )			
+	
 	add_executable( 
 		SystemTest
-		./bdr/bdr_Buffer.cpp
-		./bdr/bdr_BufferDeviceAddressExtension.cpp
-		./bdr/bdr_CommandPool.cpp
-		./bdr/bdr_ComputePipeline.cpp
-		./bdr/bdr_DescriptorIndexingExtension.cpp
-		./bdr/bdr_DescriptorPool.cpp
-		./bdr/bdr_DescriptorSetLayout.cpp
-		./bdr/bdr_Extension.cpp
-		./bdr/bdr_GraphicsPipeline.cpp
-		./bdr/bdr_Helpers.cpp
-		./bdr/bdr_Image.cpp
-		./bdr/bdr_IndexBuffer.cpp
-		./bdr/bdr_Pipeline.cpp
-		./bdr/bdr_RayTracingAccelerationStructure.cpp
-		./bdr/bdr_RayTracingBLASEntry.cpp
-		./bdr/bdr_RayTracingExtension.cpp
-		./bdr/bdr_RayTracingPipeline.cpp
-		./bdr/bdr_RayTracingShaderBindingTable.cpp
-		./bdr/bdr_RayTracingTLASEntry.cpp
-		./bdr/bdr_Renderer.cpp
-		./bdr/bdr_Sampler.cpp
-		./bdr/bdr_ShaderModule.cpp
-		./bdr/bdr_VertexBuffer.cpp
-		./bdr/bdr_vma_implementation.cpp
+		
+		# bdr
+		${bdr_files}
+		
+		# tests
 		./tests/SystemTest.cpp 
 	)	
 
