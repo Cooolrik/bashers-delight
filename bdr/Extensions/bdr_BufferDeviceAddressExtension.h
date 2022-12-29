@@ -1,7 +1,7 @@
 #pragma once
 
-#include "bdr_Renderer.h"
-#include "bdr_Extension.h"
+#include <bdr/bdr_Renderer.h>
+#include <bdr/bdr_Extension.h>
 
 namespace bdr
     {

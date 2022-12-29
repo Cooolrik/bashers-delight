@@ -1,3 +1,112 @@
+#define BDR_SOURCE_FILE
+
+
+#include "bdr_Renderer.h"
+
+#include "bdr_macros.inl"
+
+namespace bdr
+	{
+	VkResultReturn<unique_ptr<Renderer>> Renderer::Create( const Template& parameters )
+		{
+		auto renderer = std::make_unique<Renderer>();
+		VLK_CALL( renderer->CreateInternal( parameters ) )
+		return { result , std::move(renderer) };
+		}
+
+	VkResult Renderer::CreateInternal( const Template& parameters )
+		{
+		auto pThis = std::make_unique<Renderer>();
+
+		pThis->EnableValidation = createParameters.EnableVulkanValidation;
+
+		// make sure all validation layers exist
+		if( pThis->EnableVulkanValidation && !haveAllValidationLayers() )
+			{
+			throw std::runtime_error( "Vulkan validation is not available." );
+			}
+
+		// application information, engine version 0.1
+		VkApplicationInfo applicationInfo{};
+		applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+		applicationInfo.pApplicationName = parameters.ApplicationName.c_str();
+		applicationInfo.applicationVersion = parameters.ApplicationVersion;
+		applicationInfo.pEngineName = "VulkanRenderer";
+		applicationInfo.engineVersion = VK_MAKE_VERSION( 0, 1, 0 );
+		applicationInfo.apiVersion = VK_API_VERSION_1_3;
+
+		// instance creation info
+		VkInstanceCreateInfo instanceCreateInfo{};
+		instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+		instanceCreateInfo.pApplicationInfo = &applicationInfo;
+
+		// setup list of needed extensions from calling app
+		for( uint i = 0; i < createParameters.NeededExtensionsCount; ++i )
+			{
+			pThis->ExtensionList.push_back( createParameters.NeededExtensions[i] );
+			}
+
+		// enable additional extensions
+		pThis->BufferDeviceAddressEXT = new BufferDeviceAddressExtension( pThis );
+		pThis->EnabledExtensions.push_back( pThis->BufferDeviceAddressEXT );
+
+		pThis->DescriptorIndexingEXT = new DescriptorIndexingExtension( pThis );
+		pThis->EnabledExtensions.push_back( pThis->DescriptorIndexingEXT );
+
+		if( createParameters.EnableRayTracingExtension )
+			{
+			pThis->RayTracingEXT = new RayTracingExtension( pThis );
+			pThis->EnabledExtensions.push_back( pThis->RayTracingEXT );
+			}
+
+		// call all enabled extensions pre-create instance
+		for( auto ext : pThis->EnabledExtensions )
+			{
+			VLK_CALL( ext->CreateInstance(  &instanceCreateInfo, &pThis->ExtensionList ) );
+			}
+
+		// setup vulkan validation extension if wanted
+		VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfo{};
+		if( pThis->EnableVulkanValidation )
+			{
+			// add to extensions to enable
+			pThis->ExtensionList.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+
+			// add the validation layers
+			instanceCreateInfo.enabledLayerCount = static_cast<uint>( ValidationLayers.size() );
+			instanceCreateInfo.ppEnabledLayerNames = ValidationLayers.data();
+
+			// insert create info into create list
+			debugUtilsMessengerCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+			debugUtilsMessengerCreateInfo.messageSeverity = createParameters.DebugMessageSeverityMask;
+			debugUtilsMessengerCreateInfo.messageType = createParameters.DebugMessageTypeMask;
+			debugUtilsMessengerCreateInfo.pfnUserCallback = createParameters.DebugMessageCallback;
+			debugUtilsMessengerCreateInfo.pNext = instanceCreateInfo.pNext;
+			instanceCreateInfo.pNext = &debugUtilsMessengerCreateInfo;
+			}
+
+		// create instance
+		instanceCreateInfo.enabledExtensionCount = static_cast<uint>( pThis->ExtensionList.size() );
+		instanceCreateInfo.ppEnabledExtensionNames = pThis->ExtensionList.data();
+		VLK_CALL( vkCreateInstance( &instanceCreateInfo, nullptr, &pThis->Instance ) );
+
+		// create debug messager
+		if( pThis->EnableVulkanValidation )
+			{
+			VLK_CALL( _vkCreateDebugUtilsMessengerEXT( pThis->Instance, &debugUtilsMessengerCreateInfo, nullptr, &pThis->DebugUtilsMessenger ) );
+			}
+
+		// call enabled extensions post-create
+		for( auto ext : pThis->EnabledExtensions )
+			{
+			VLK_CALL( ext->PostCreateInstance() );
+			}
+
+		return pThis;
+		}
+
+	}
+
 
 #include "bdr_Common.inl"
 
@@ -11,9 +120,9 @@
 #include "bdr_DescriptorPool.h"
 #include "bdr_Image.h"
 #include "bdr_Sampler.h"
-#include "bdr_RayTracingExtension.h"
-#include "bdr_BufferDeviceAddressExtension.h"
-#include "bdr_DescriptorIndexingExtension.h"
+#include "./Extensions/bdr_RayTracingExtension.h"
+#include "./Extensions/bdr_BufferDeviceAddressExtension.h"
+#include "./Extensions/bdr_DescriptorIndexingExtension.h"
 #include "bdr_Helpers.h"
 #include "bdr_ShaderModule.h"
 
@@ -222,97 +331,6 @@ template<class B, class BT> B* bdr::Renderer::NewBuffer( const BT& bt ) const
 	}
 
 
-
-bdr::Renderer* bdr::Renderer::Create( const CreateParameters& createParameters )
-	{
-	Renderer* pThis = new Renderer();
-
-	pThis->EnableVulkanValidation = createParameters.EnableVulkanValidation;
-
-	// make sure all validation layers exist
-	if( pThis->EnableVulkanValidation && !haveAllValidationLayers() )
-		{
-		throw std::runtime_error( "Vulkan validation is not available." );
-		}
-
-	// application information, version 0.1
-	VkApplicationInfo applicationInfo{};
-	applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	applicationInfo.pApplicationName = "VulkanRenderer";
-	applicationInfo.applicationVersion = VK_MAKE_VERSION( 0, 1, 0 );
-	applicationInfo.pEngineName = "VulkanRenderer";
-	applicationInfo.engineVersion = VK_MAKE_VERSION( 0, 1, 0 );
-	applicationInfo.apiVersion = VK_API_VERSION_1_2;
-
-	// instance creation info
-	VkInstanceCreateInfo instanceCreateInfo{};
-	instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	instanceCreateInfo.pApplicationInfo = &applicationInfo;
-
-	// setup list of needed extensions from calling app
-	for( uint i = 0; i < createParameters.NeededExtensionsCount; ++i )
-		{
-		pThis->ExtensionList.push_back( createParameters.NeededExtensions[i] );
-		}
-
-	// enable additional extensions
-	pThis->BufferDeviceAddressEXT = new BufferDeviceAddressExtension( pThis );
-	pThis->EnabledExtensions.push_back( pThis->BufferDeviceAddressEXT );
-
-	pThis->DescriptorIndexingEXT = new DescriptorIndexingExtension( pThis );
-	pThis->EnabledExtensions.push_back( pThis->DescriptorIndexingEXT );
-
-	if( createParameters.EnableRayTracingExtension )
-		{
-		pThis->RayTracingEXT = new RayTracingExtension( pThis );
-		pThis->EnabledExtensions.push_back( pThis->RayTracingEXT );
-		}
-
-	// call all enabled extensions pre-create instance
-	for( auto ext : pThis->EnabledExtensions )
-		{
-		VLK_CALL( ext->CreateInstance(  &instanceCreateInfo, &pThis->ExtensionList ) );
-		}
-
-	// setup vulkan validation extension if wanted
-	VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfo{};
-	if( pThis->EnableVulkanValidation )
-		{
-		// add to extensions to enable
-		pThis->ExtensionList.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
-
-		// add the validation layers
-		instanceCreateInfo.enabledLayerCount = static_cast<uint>( ValidationLayers.size() );
-		instanceCreateInfo.ppEnabledLayerNames = ValidationLayers.data();
-
-		// insert create info into create list
-		debugUtilsMessengerCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-		debugUtilsMessengerCreateInfo.messageSeverity = createParameters.DebugMessageSeverityMask;
-		debugUtilsMessengerCreateInfo.messageType = createParameters.DebugMessageTypeMask;
-		debugUtilsMessengerCreateInfo.pfnUserCallback = createParameters.DebugMessageCallback;
-		debugUtilsMessengerCreateInfo.pNext = instanceCreateInfo.pNext;
-		instanceCreateInfo.pNext = &debugUtilsMessengerCreateInfo;
-		}
-
-	// create instance
-	instanceCreateInfo.enabledExtensionCount = static_cast<uint>( pThis->ExtensionList.size() );
-	instanceCreateInfo.ppEnabledExtensionNames = pThis->ExtensionList.data();
-	VLK_CALL( vkCreateInstance( &instanceCreateInfo, nullptr, &pThis->Instance ) );
-
-	// create debug messager
-	if( pThis->EnableVulkanValidation )
-		{
-		VLK_CALL( _vkCreateDebugUtilsMessengerEXT( pThis->Instance, &debugUtilsMessengerCreateInfo, nullptr, &pThis->DebugUtilsMessenger ) );
-		}
-
-	// call enabled extensions post-create
-	for( auto ext : pThis->EnabledExtensions )
-		{
-		VLK_CALL( ext->PostCreateInstance() );
-		}
-
-	return pThis;
-	}
 
 
 bool bdr::Renderer::LookupPhysicalDeviceQueueFamilies()

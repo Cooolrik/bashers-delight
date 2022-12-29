@@ -1,16 +1,19 @@
+
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <iostream>
 
-#include <vulkan/vulkan.h>
-#include <vk_mem_alloc.h>
+#include <bdr/bdr.h>
+#include <bdr/bdr_Renderer.h>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include <bdr/bdr_Renderer.h>
-
 using namespace bdr;
 
+#include <system_error>
+		
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT /*messageSeverity*/,
 	VkDebugUtilsMessageTypeFlagsEXT /*messageType*/,
 	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
@@ -32,21 +35,21 @@ void run()
 	const char** glfwExtensions = glfwGetRequiredInstanceExtensions( &glfwExtensionCount );
 
 	// create the renderer, list needed extensions
-	Renderer::CreateParameters createParameters{};
-	createParameters.EnableVulkanValidation = true;
-	createParameters.EnableRayTracingExtension = true;
-	createParameters.NeededExtensionsCount = glfwExtensionCount;
-	createParameters.NeededExtensions = glfwExtensions;
-	createParameters.DebugMessageCallback = &debugCallback;
-	createParameters.DebugMessageSeverityMask =
+	Renderer::Template params;
+	params.EnableValidation = true;
+	params.EnableRayTracingExtension = true;
+	params.NeededExtensionsCount = glfwExtensionCount;
+	params.NeededExtensions = glfwExtensions;
+	params.DebugMessageCallback = &debugCallback;
+	params.DebugMessageSeverityMask =
 		//VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
 		VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
 		VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	createParameters.DebugMessageTypeMask =
+	params.DebugMessageTypeMask =
 		VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
 		VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-	auto renderer = Renderer::Create( createParameters );
+	auto renderer = Renderer::Create( params );
 
 	//// create the window surface using glfw
 	//if( glfwCreateWindowSurface( renderData->renderer->GetInstance(), renderData->window, nullptr, &renderData->surface ) != VK_SUCCESS )
@@ -54,7 +57,7 @@ void run()
 	//	throw std::runtime_error( "failed to create window surface!" );
 	//	}
 
-	delete renderer;
+	renderer.reset();
 
 	glfwDestroyWindow( window );
 	glfwTerminate();

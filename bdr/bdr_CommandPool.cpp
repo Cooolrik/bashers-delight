@@ -5,9 +5,9 @@
 #include "bdr_IndexBuffer.h"
 #include "bdr_Image.h"
 
-#include "bdr_RayTracingExtension.h"
-#include "bdr_RayTracingPipeline.h"
-#include "bdr_RayTracingShaderBindingTable.h"
+#include "Extensions/bdr_RayTracingExtension.h"
+#include "Extensions/bdr_RayTracingPipeline.h"
+#include "Extensions/bdr_RayTracingShaderBindingTable.h"
 
 #include <stdexcept>
 #include <algorithm>

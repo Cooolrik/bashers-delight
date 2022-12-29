@@ -24,6 +24,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable( vma )			
 			
+# ctle
+FetchContent_Declare(
+	ctle
+	GIT_REPOSITORY https://github.com/Cooolrik/ctle.git
+	GIT_TAG		   main
+)
+FetchContent_MakeAvailable( ctle )						
+			
+			
 # build test if this is the main cmake file
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)			
 				
@@ -61,54 +70,59 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 	# source files in bdr
 	set(
 		bdr_files
-		./bdr/bdr_Buffer.cpp
-		./bdr/bdr_Buffer.h
-		./bdr/bdr_BufferDeviceAddressExtension.cpp
-		./bdr/bdr_BufferDeviceAddressExtension.h
-		./bdr/bdr_CommandPool.cpp
-		./bdr/bdr_CommandPool.h
-		./bdr/bdr_Common.inl
-		./bdr/bdr_ComputePipeline.cpp
-		./bdr/bdr_ComputePipeline.h
-		./bdr/bdr_DescriptorIndexingExtension.cpp
-		./bdr/bdr_DescriptorIndexingExtension.h
-		./bdr/bdr_DescriptorPool.cpp
-		./bdr/bdr_DescriptorPool.h
-		./bdr/bdr_DescriptorSetLayout.cpp
-		./bdr/bdr_DescriptorSetLayout.h
-		./bdr/bdr_Extension.cpp
-		./bdr/bdr_Extension.h
-		./bdr/bdr_GraphicsPipeline.cpp
-		./bdr/bdr_GraphicsPipeline.h
-		./bdr/bdr_Helpers.cpp
-		./bdr/bdr_Helpers.h
-		./bdr/bdr_Image.cpp
-		./bdr/bdr_Image.h
-		./bdr/bdr_IndexBuffer.cpp
-		./bdr/bdr_IndexBuffer.h
-		./bdr/bdr_Pipeline.cpp
-		./bdr/bdr_Pipeline.h
-		./bdr/Extensions/bdr_RayTracingAccelerationStructure.cpp
-		./bdr/Extensions/bdr_RayTracingAccelerationStructure.h
-		./bdr/Extensions/bdr_RayTracingBLASEntry.cpp
-		./bdr/Extensions/bdr_RayTracingBLASEntry.h
-		./bdr/Extensions/bdr_RayTracingExtension.cpp
-		./bdr/Extensions/bdr_RayTracingExtension.h
-		./bdr/Extensions/bdr_RayTracingPipeline.cpp
-		./bdr/Extensions/bdr_RayTracingPipeline.h
-		./bdr/Extensions/bdr_RayTracingShaderBindingTable.cpp
-		./bdr/Extensions/bdr_RayTracingShaderBindingTable.h
-		./bdr/Extensions/bdr_RayTracingTLASEntry.cpp
-		./bdr/Extensions/bdr_RayTracingTLASEntry.h
-		./bdr/bdr_Renderer.cpp
+
+		./bdr/bdr.h
+		./bdr/bdr_macros.inl
+		
 		./bdr/bdr_Renderer.h
-		./bdr/bdr_Sampler.cpp
-		./bdr/bdr_Sampler.h
-		./bdr/bdr_ShaderModule.cpp
-		./bdr/bdr_ShaderModule.h
-		./bdr/bdr_VertexBuffer.cpp
-		./bdr/bdr_VertexBuffer.h
-		./bdr/bdr_vma_implementation.cpp		
+		./bdr/bdr_Renderer.cpp
+		
+		#./bdr/bdr_Buffer.cpp
+		#./bdr/bdr_Buffer.h
+		#./bdr/Extensions/bdr_BufferDeviceAddressExtension.cpp
+		#./bdr/Extensions/bdr_BufferDeviceAddressExtension.h
+		#./bdr/bdr_CommandPool.cpp
+		#./bdr/bdr_CommandPool.h
+		#./bdr/bdr_Common.inl
+		#./bdr/bdr_ComputePipeline.cpp
+		#./bdr/bdr_ComputePipeline.h
+		#./bdr/Extensions/bdr_DescriptorIndexingExtension.cpp
+		#./bdr/Extensions/bdr_DescriptorIndexingExtension.h
+		#./bdr/bdr_DescriptorPool.cpp
+		#./bdr/bdr_DescriptorPool.h
+		#./bdr/bdr_DescriptorSetLayout.cpp
+		#./bdr/bdr_DescriptorSetLayout.h
+		#./bdr/bdr_Extension.cpp
+		#./bdr/bdr_Extension.h
+		#./bdr/bdr_GraphicsPipeline.cpp
+		#./bdr/bdr_GraphicsPipeline.h
+		#./bdr/bdr_Helpers.cpp
+		#./bdr/bdr_Helpers.h
+		#./bdr/bdr_Image.cpp
+		#./bdr/bdr_Image.h
+		#./bdr/bdr_IndexBuffer.cpp
+		#./bdr/bdr_IndexBuffer.h
+		#./bdr/bdr_Pipeline.cpp
+		#./bdr/bdr_Pipeline.h
+		#./bdr/Extensions/bdr_RayTracingAccelerationStructure.cpp
+		#./bdr/Extensions/bdr_RayTracingAccelerationStructure.h
+		#./bdr/Extensions/bdr_RayTracingBLASEntry.cpp
+		#./bdr/Extensions/bdr_RayTracingBLASEntry.h
+		#./bdr/Extensions/bdr_RayTracingExtension.cpp
+		#./bdr/Extensions/bdr_RayTracingExtension.h
+		#./bdr/Extensions/bdr_RayTracingPipeline.cpp
+		#./bdr/Extensions/bdr_RayTracingPipeline.h
+		#./bdr/Extensions/bdr_RayTracingShaderBindingTable.cpp
+		#./bdr/Extensions/bdr_RayTracingShaderBindingTable.h
+		#./bdr/Extensions/bdr_RayTracingTLASEntry.cpp
+		#./bdr/Extensions/bdr_RayTracingTLASEntry.h
+		#./bdr/bdr_Sampler.cpp
+		#./bdr/bdr_Sampler.h
+		#./bdr/bdr_ShaderModule.cpp
+		#./bdr/bdr_ShaderModule.h
+		#./bdr/bdr_VertexBuffer.cpp
+		#./bdr/bdr_VertexBuffer.h
+		#./bdr/bdr_vma_implementation.cpp		
 		)
 		
 	source_group_by_folder( ./bdr bdr ${bdr_files} )			
@@ -144,6 +158,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		PUBLIC ${glm_SOURCE_DIR}
 		PUBLIC ${vma_SOURCE_DIR}/include
 		PUBLIC ${glfw_SOURCE_DIR}/include
+		PUBLIC ${ctle_SOURCE_DIR}
 		PUBLIC ${Vulkan_INCLUDE_DIR}
 	)
 

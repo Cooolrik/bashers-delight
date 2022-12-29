@@ -1,6 +1,7 @@
-#include "bdr_Common.inl"
+#include <bdr/bdr_Common.inl>
+#include <bdr/bdr_Buffer.h>
+
 #include "bdr_BufferDeviceAddressExtension.h"
-#include "bdr_Buffer.h"
 
 #include <stdexcept>
 #include <algorithm>

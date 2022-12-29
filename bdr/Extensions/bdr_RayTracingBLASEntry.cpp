@@ -1,8 +1,8 @@
-#include "bdr_Common.inl"
+#include "../bdr_Common.inl"
 
 #include "bdr_RayTracingBLASEntry.h"
-#include "bdr_VertexBuffer.h"
-#include "bdr_IndexBuffer.h"
+#include "../bdr_VertexBuffer.h"
+#include "../bdr_IndexBuffer.h"
 
 unsigned int bdr::RayTracingBLASEntry::GetGeometryCount() const
 	{
@@ -26,7 +26,7 @@ unsigned int bdr::RayTracingBLASEntry::AddGeometry(
 	accelerationStructureGeometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
 	accelerationStructureGeometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
 	accelerationStructureGeometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-
+	
 	// setup triangles of geometry
 	accelerationStructureGeometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
 	accelerationStructureGeometry.geometry.triangles.vertexFormat = vertexBuffer->GetDescription().GetVertexInputAttributeDescriptions()[vertexCoordAttributeIndex].format;
