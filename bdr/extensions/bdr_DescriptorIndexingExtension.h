@@ -1,14 +1,11 @@
 #pragma once
 
-#include "bdr_Renderer.h"
-#include "bdr_Extension.h"
+#include "../bdr_Extension.h"
 
 namespace bdr
     {
     class DescriptorIndexingExtension : public Extension
         {
-        BDSubmoduleMacro( DescriptorIndexingExtension, Extension, Renderer );
-
         private:
 
             VkPhysicalDeviceDescriptorIndexingFeatures DescriptorIndexingFeaturesQuery{};
@@ -17,6 +14,7 @@ namespace bdr
             VkPhysicalDeviceDescriptorIndexingProperties DescriptorIndexingProperties{};
 
         public:
+            DescriptorIndexingExtension( const Instance* _instance ) : Extension(_instance) {};
 
             // ####################################
             //
@@ -42,7 +40,6 @@ namespace bdr
 
             // called before device is created
             virtual VkResult CreateDevice( VkDeviceCreateInfo* deviceCreateInfo );
-
         };
     };
 

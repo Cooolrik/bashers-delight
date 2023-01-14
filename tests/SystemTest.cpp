@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include <bdr/bdr.h>
-#include <bdr/bdr_Renderer.h>
+#include <bdr/bdr_Instance.h>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -34,8 +34,10 @@ void run()
 	uint glfwExtensionCount = 0;
 	const char** glfwExtensions = glfwGetRequiredInstanceExtensions( &glfwExtensionCount );
 
+	ctle::set_global_log_level( ctle::log_level::debug );
+
 	// create the renderer, list needed extensions
-	Renderer::Template params;
+	Instance::Template params;
 	params.EnableValidation = true;
 	params.EnableRayTracingExtension = true;
 	params.NeededExtensionsCount = glfwExtensionCount;
@@ -49,7 +51,7 @@ void run()
 		VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
 		VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-	auto renderer = Renderer::Create( params );
+	auto instance = Instance::Create( params );
 
 	//// create the window surface using glfw
 	//if( glfwCreateWindowSurface( renderData->renderer->GetInstance(), renderData->window, nullptr, &renderData->surface ) != VK_SUCCESS )
@@ -57,7 +59,7 @@ void run()
 	//	throw std::runtime_error( "failed to create window surface!" );
 	//	}
 
-	renderer.reset();
+	instance.value().reset();
 
 	glfwDestroyWindow( window );
 	glfwTerminate();

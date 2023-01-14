@@ -15,6 +15,7 @@
 // standard library headers
 #include <vector>
 #include <string>
+#include <set>
 #include <memory>
 
 // include Vulkan and VMA 
@@ -22,6 +23,7 @@
 #include <vk_mem_alloc.h> 
 
 // ctle includes
+#include <ctle/log.h>
 #include <ctle/status_return.h>
 #include <ctle/status.h>
 
@@ -35,6 +37,7 @@ namespace bdr
 {
 	using uint = std::uint32_t;
 	using std::vector;
+	using std::set;
 	using std::string;
 	using std::unique_ptr;
 	using std::min;
@@ -45,5 +48,33 @@ namespace bdr
 	// Status and Status paired with another return value
 	using Status = ctle::status;
 	template<class _Ty> using StatusPair = ctle::status_return<ctle::status,_Ty>;
+
+	// list all classes 
+	class Instance;
+	class Device;
+	class Extension;
+	class DescriptorIndexingExtension;
+	class BufferDeviceAddressExtension;
+	class RayTracingExtension;
+
+	// define submodule class template, which all submodules derive from
+	template <class _ModuleTy> class SubmoduleTemplate
+		{
+		protected:
+			const _ModuleTy* Module;
+
+		public:
+			~SubmoduleTemplate() {};
+			const _ModuleTy* GetModule() const { return this->Module; };
+
+		protected:
+			SubmoduleTemplate( const _ModuleTy* _module ) : Module(_module) {};
+		};
+
+	// define submodules of the main renderer and extensions
+	using MainSubmodule = SubmoduleTemplate<Instance>;
+	using DescriptorIndexingSubmodule = SubmoduleTemplate<DescriptorIndexingExtension>;
+	using BufferDeviceAddressSubmodule = SubmoduleTemplate<BufferDeviceAddressExtension>;
+	using RayTracingSubmodule = SubmoduleTemplate<RayTracingExtension>;
 }
 

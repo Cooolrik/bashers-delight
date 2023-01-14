@@ -1,7 +1,6 @@
 #pragma once
 
-#include "bdr_Renderer.h"
-#include "bdr_Extension.h"
+#include "../../bdr_Extension.h"
 
 namespace bdr
     {
@@ -12,12 +11,8 @@ namespace bdr
     class RayTracingTLASEntry;
     class RayTracingShaderBindingTable;
 
-    BDSubmoduleBaseMacro( RayTracingExtensionSubmodule , RayTracingExtension );
-
     class RayTracingExtension : public Extension
         {
-        BDSubmoduleMacro( RayTracingExtension, Extension, Renderer );
-
         private:
             VkPhysicalDeviceAccelerationStructureFeaturesKHR AccelerationStructureFeaturesQuery{};
             VkPhysicalDeviceRayTracingPipelineFeaturesKHR RayTracingPipelineFeaturesQuery{};
@@ -30,10 +25,10 @@ namespace bdr
             VkPhysicalDeviceAccelerationStructurePropertiesKHR AccelerationStructureProperties{};
             VkPhysicalDeviceRayTracingPipelinePropertiesKHR RayTracingPipelineProperties{};
 
-            std::vector<RayTracingAccelerationStructure*> BLASes;
+            vector<RayTracingAccelerationStructure*> BLASes;
             RayTracingAccelerationStructure *TLAS{};
 
-            std::set<RayTracingPipeline*> RayTracingPipelines;
+            set<RayTracingPipeline*> RayTracingPipelines;
             void RemoveRayTracingPipeline( RayTracingPipeline* pipeline );
 
             RayTracingAccelerationStructure* CreateAccBuffer( VkAccelerationStructureCreateInfoKHR createInfo );
@@ -45,6 +40,7 @@ namespace bdr
             VkResult BeginInternalCommandBuffer( VkCommandBuffer cmdBuffer );
 
         public:
+            RayTracingExtension( const Instance* _instance ) : Extension(_instance) {};
 
             // build the BLAS from the list of entries
             // TODO: make this more dynamic so we can add and remove entries in the blas
@@ -96,8 +92,8 @@ namespace bdr
             // called before any extension is deleted. makes it possible to remove data that is dependent on some other extension
             virtual VkResult Cleanup();
 
-            BDGetConstRefMacro( VkPhysicalDeviceAccelerationStructurePropertiesKHR, AccelerationStructureProperties );
-            BDGetConstRefMacro( VkPhysicalDeviceRayTracingPipelinePropertiesKHR, RayTracingPipelineProperties );
+            //BDGetConstRefMacro( VkPhysicalDeviceAccelerationStructurePropertiesKHR, AccelerationStructureProperties );
+            //BDGetConstRefMacro( VkPhysicalDeviceRayTracingPipelinePropertiesKHR, RayTracingPipelineProperties );
 
             // Extension dynamic methods
 

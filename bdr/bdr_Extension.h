@@ -3,13 +3,14 @@
 // disable warning for "enum class" since we can't modify Vulkan SDK
 #pragma warning( disable : 26812 )
 
-#include "bdr_Renderer.h"
+#include "bdr_Instance.h"
 
 namespace bdr
     {
-    class Extension : public RendererSubmodule
+    class Extension : public MainSubmodule
         {
-        BDSubmoduleMacro( Extension, RendererSubmodule, Renderer );
+        protected:
+            Extension( const Instance* _module ) : MainSubmodule(_module) {};
 
         protected:
             static void AddExtensionToList( std::vector<const char*>* extensionList, const char* extensionName );
@@ -45,8 +46,5 @@ namespace bdr
 
             // called before any extension is deleted. makes it possible to remove data that is dependent on some other extension
             virtual VkResult Cleanup();
-
-            // get the parent renderer
-            BDGetMacro( Renderer*, Module );
         };
     };

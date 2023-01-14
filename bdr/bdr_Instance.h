@@ -1,22 +1,29 @@
 #pragma once
 
 #include "bdr.h"
-#include "bdr_macros.inl"
 
 namespace bdr 
 	{
-	class Renderer
+	class Instance
 		{
 		public:
 			class Template;
 
 		private:
-			Renderer() = default;
-			Renderer( const Renderer& other );
+			Instance() = default;
+			Instance( const Instance& other );
 
-			VkInstance Instance = {};
+			VkInstance InstanceHandle = {};
+			VkDebugUtilsMessengerEXT DebugUtilsMessenger = {};
+
 			bool EnableValidation = false;
-			std::vector<const char*> ExtensionList;
+			vector<const char*> ExtensionList;
+
+			// extensions
+			vector<Extension*> EnabledExtensions;
+			unique_ptr<DescriptorIndexingExtension> DescriptorIndexingExtension;
+			unique_ptr<BufferDeviceAddressExtension> BufferDeviceAddressExtension;
+			unique_ptr<RayTracingExtension> RayTracingExtension;
 
 			//
 			//struct TargetImage
@@ -29,7 +36,7 @@ namespace bdr
 			//std::vector<const char*> DeviceExtensionList;
 
 			//VkSurfaceKHR Surface = nullptr;
-			//VkDebugUtilsMessengerEXT DebugUtilsMessenger = nullptr;
+			
 
 			//VkPhysicalDevice PhysicalDevice = nullptr;
 			//uint PhysicalDeviceQueueGraphicsFamily = (uint)-1;
@@ -69,11 +76,7 @@ namespace bdr
 			//uint CurrentFrame = 0;
 			//uint CurrentImage = 0;
 
-			//// extensions
-			//std::vector<Extension*> EnabledExtensions;
-			//DescriptorIndexingExtension* DescriptorIndexingEXT = nullptr;
-			//BufferDeviceAddressExtension* BufferDeviceAddressEXT = nullptr;
-			//RayTracingExtension* RayTracingEXT = nullptr;
+
 
 			//bool LookupPhysicalDeviceQueueFamilies();
 			//bool ValidatePhysicalDeviceRequiredExtensionsSupported();
@@ -89,11 +92,16 @@ namespace bdr
 			//VkCommandBuffer BeginInternalCommandBuffer() const;
 			//void EndAndSubmitInternalCommandBuffer( VkCommandBuffer buffer ) const;
 
-			VkResult CreateInternal( const Template& parameters );
-
 		public:
-			static StatusPair<unique_ptr<Renderer>> Create( const Template& parameters );
+			static StatusPair<unique_ptr<Instance>> Create( const Template& parameters );
 		
+			// template method which makes a unique_ptr to a submodule 
+			template<typename T, typename... Args>
+			std::unique_ptr<T> Make(Args&&... args)
+			{
+				return std::unique_ptr<T>(new T(this, std::forward<Args>(args)...));
+			}
+
 			//// setup the device with the created surface
 			//void CreateDevice( VkSurfaceKHR surface );
 
@@ -153,10 +161,11 @@ namespace bdr
 			//// The call is blocking until the command has been run, so only use during inits.
 			//void RunBlockingCommandBuffer( std::function<void (VkCommandBuffer cmd)> fp ) const;
 
-			~Renderer();
+			~Instance();
 
 			//// public get methods
-			//BDRGetMacro( VkInstance, Instance );
+			VkInstance GetInstance() const { return this->InstanceHandle; }
+
 			//BDRGetMacro( VkPhysicalDevice, PhysicalDevice );
 			//BDRGetMacro( VkDevice, Device );
 			//BDRGetMacro( VkQueue, GraphicsQueue );
@@ -181,8 +190,8 @@ namespace bdr
 
 		};
 
-	// Renderer template creation parameters
-	class Renderer::Template
+	// Instance template creation parameters
+	class Instance::Template
 		{
 		public:
 			// the application name
@@ -206,6 +215,5 @@ namespace bdr
 			VkDebugUtilsMessageSeverityFlagsEXT DebugMessageSeverityMask = {};
 			VkDebugUtilsMessageTypeFlagsEXT DebugMessageTypeMask = {};
 		};
-	};
 
-#include "bdr_macros_end.inl"
+	};

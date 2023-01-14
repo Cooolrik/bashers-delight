@@ -72,22 +72,40 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		bdr_files
 
 		./bdr/bdr.h
-		./bdr/bdr_macros.inl
+		./bdr/preprocessor_macros/bdr_source_macros.inl
 		
-		./bdr/bdr_Renderer.h
-		./bdr/bdr_Renderer.cpp
+		./bdr/bdr_Instance.h
+		./bdr/bdr_Instance.cpp
 		
+		./bdr/implementations/bdr_ctle_implementation.cpp
+		./bdr/implementations/bdr_vma_implementation.cpp
+
+		./bdr/Extensions/bdr_BufferDeviceAddressExtension.cpp
+		./bdr/Extensions/bdr_BufferDeviceAddressExtension.h
+
+		./bdr/Extensions/bdr_DescriptorIndexingExtension.cpp
+		./bdr/Extensions/bdr_DescriptorIndexingExtension.h
+
+		#./bdr/Extensions/RayTracing/bdr_RayTracingAccelerationStructure.cpp
+		#./bdr/Extensions/RayTracing/bdr_RayTracingAccelerationStructure.h
+		#./bdr/Extensions/RayTracing/bdr_RayTracingBLASEntry.cpp
+		#./bdr/Extensions/RayTracing/bdr_RayTracingBLASEntry.h
+		./bdr/Extensions/ray_tracing/bdr_RayTracingExtension.cpp
+		./bdr/Extensions/ray_tracing/bdr_RayTracingExtension.h
+		#./bdr/Extensions/RayTracing/bdr_RayTracingPipeline.cpp
+		#./bdr/Extensions/RayTracing/bdr_RayTracingPipeline.h
+		#./bdr/Extensions/RayTracing/bdr_RayTracingShaderBindingTable.cpp
+		#./bdr/Extensions/RayTracing/bdr_RayTracingShaderBindingTable.h
+		#./bdr/Extensions/RayTracing/bdr_RayTracingTLASEntry.cpp
+		#./bdr/Extensions/RayTracing/bdr_RayTracingTLASEntry.h
+
 		#./bdr/bdr_Buffer.cpp
 		#./bdr/bdr_Buffer.h
-		#./bdr/Extensions/bdr_BufferDeviceAddressExtension.cpp
-		#./bdr/Extensions/bdr_BufferDeviceAddressExtension.h
 		#./bdr/bdr_CommandPool.cpp
 		#./bdr/bdr_CommandPool.h
 		#./bdr/bdr_Common.inl
 		#./bdr/bdr_ComputePipeline.cpp
 		#./bdr/bdr_ComputePipeline.h
-		#./bdr/Extensions/bdr_DescriptorIndexingExtension.cpp
-		#./bdr/Extensions/bdr_DescriptorIndexingExtension.h
 		#./bdr/bdr_DescriptorPool.cpp
 		#./bdr/bdr_DescriptorPool.h
 		#./bdr/bdr_DescriptorSetLayout.cpp
@@ -104,25 +122,14 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		#./bdr/bdr_IndexBuffer.h
 		#./bdr/bdr_Pipeline.cpp
 		#./bdr/bdr_Pipeline.h
-		#./bdr/Extensions/bdr_RayTracingAccelerationStructure.cpp
-		#./bdr/Extensions/bdr_RayTracingAccelerationStructure.h
-		#./bdr/Extensions/bdr_RayTracingBLASEntry.cpp
-		#./bdr/Extensions/bdr_RayTracingBLASEntry.h
-		#./bdr/Extensions/bdr_RayTracingExtension.cpp
-		#./bdr/Extensions/bdr_RayTracingExtension.h
-		#./bdr/Extensions/bdr_RayTracingPipeline.cpp
-		#./bdr/Extensions/bdr_RayTracingPipeline.h
-		#./bdr/Extensions/bdr_RayTracingShaderBindingTable.cpp
-		#./bdr/Extensions/bdr_RayTracingShaderBindingTable.h
-		#./bdr/Extensions/bdr_RayTracingTLASEntry.cpp
-		#./bdr/Extensions/bdr_RayTracingTLASEntry.h
+
 		#./bdr/bdr_Sampler.cpp
 		#./bdr/bdr_Sampler.h
 		#./bdr/bdr_ShaderModule.cpp
 		#./bdr/bdr_ShaderModule.h
 		#./bdr/bdr_VertexBuffer.cpp
 		#./bdr/bdr_VertexBuffer.h
-		#./bdr/bdr_vma_implementation.cpp		
+		
 		)
 		
 	source_group_by_folder( ./bdr bdr ${bdr_files} )			

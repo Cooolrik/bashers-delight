@@ -1,20 +1,18 @@
 #pragma once
 
-#include <bdr/bdr_Renderer.h>
-#include <bdr/bdr_Extension.h>
+#include "../bdr_Extension.h"
 
 namespace bdr
     {
     class BufferDeviceAddressExtension : public Extension
         {
-        BDSubmoduleMacro( BufferDeviceAddressExtension, Extension, Renderer );
-
         private:
 
             VkPhysicalDeviceBufferDeviceAddressFeaturesKHR BufferDeviceAddressFeaturesQuery{};
             VkPhysicalDeviceBufferDeviceAddressFeaturesKHR BufferDeviceAddressFeaturesCreate{};
 
         public:
+            BufferDeviceAddressExtension( const Instance* _instance ) : Extension(_instance) {};
 
             // ####################################
             //
