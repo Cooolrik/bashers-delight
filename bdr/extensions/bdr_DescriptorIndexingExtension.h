@@ -1,6 +1,8 @@
+// Bashers Delight Renderer, Copyright (c) 2023 Ulrik Lindahl
+// Licensed under the MIT license https://github.com/Cooolrik/bashers-delight/blob/main/LICENSE
 #pragma once
 
-#include "../bdr_Extension.h"
+#include "bdr_Extension.h"
 
 namespace bdr
     {
@@ -23,7 +25,7 @@ namespace bdr
 
 
             // called to add required device extensions
-            virtual VkResult AddRequiredDeviceExtensions( 
+            virtual Status AddRequiredDeviceExtensions( 
                 VkPhysicalDeviceFeatures2* physicalDeviceFeatures,
                 VkPhysicalDeviceProperties2* physicalDeviceProperties,
                 std::vector<const char*>* extensionList 
@@ -39,7 +41,7 @@ namespace bdr
                 );
 
             // called before device is created
-            virtual VkResult CreateDevice( VkDeviceCreateInfo* deviceCreateInfo );
+            virtual Status CreateDevice( VkDeviceCreateInfo* deviceCreateInfo );
         };
     };
 

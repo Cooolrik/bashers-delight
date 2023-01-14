@@ -4,10 +4,8 @@
 
 namespace bdr
     {
-    class RayTracingAccelerationStructure : public RayTracingExtensionSubmodule
+    class RayTracingAccelerationStructure : public RayTracingSubmodule
         {
-        BDSubmoduleMacro( RayTracingAccelerationStructure , RayTracingExtensionSubmodule, RayTracingExtension );
-
         private:
             std::unique_ptr<Buffer> ASBuffer; // buffer to hold the structure
             VkAccelerationStructureKHR AccelerationStructure = nullptr;

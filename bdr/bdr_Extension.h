@@ -1,9 +1,8 @@
+// Bashers Delight Renderer, Copyright (c) 2023 Ulrik Lindahl
+// Licensed under the MIT license https://github.com/Cooolrik/bashers-delight/blob/main/LICENSE
 #pragma once
 
-// disable warning for "enum class" since we can't modify Vulkan SDK
-#pragma warning( disable : 26812 )
-
-#include "bdr_Instance.h"
+#include "../bdr_Instance.h"
 
 namespace bdr
     {
@@ -17,13 +16,13 @@ namespace bdr
  
         public:
             // called before instance is created
-            virtual VkResult CreateInstance( VkInstanceCreateInfo* instanceCreateInfo, std::vector<const char*>* extensionList );
+            virtual Status CreateInstance( VkInstanceCreateInfo* instanceCreateInfo, std::vector<const char*>* extensionList );
 
             // called after instance is created, good place to set up dynamic methods and call stuff post create instance 
-            virtual VkResult PostCreateInstance();
+            virtual Status PostCreateInstance();
 
             // called to add required device extensions
-            virtual VkResult AddRequiredDeviceExtensions( 
+            virtual Status AddRequiredDeviceExtensions( 
                 VkPhysicalDeviceFeatures2* physicalDeviceFeatures, 
                 VkPhysicalDeviceProperties2* physicalDeviceProperties,
                 std::vector<const char*>* extensionList
@@ -39,12 +38,12 @@ namespace bdr
             );
 
             // called before device is created
-            virtual VkResult CreateDevice( VkDeviceCreateInfo* deviceCreateInfo );
+            virtual Status CreateDevice( VkDeviceCreateInfo* deviceCreateInfo );
 
             // called after device is created, good place to set up dynamic methods and call stuff post create device 
-            virtual VkResult PostCreateDevice();
+            virtual Status PostCreateDevice();
 
             // called before any extension is deleted. makes it possible to remove data that is dependent on some other extension
-            virtual VkResult Cleanup();
+            virtual Status Cleanup();
         };
     };

@@ -1,43 +1,39 @@
-#include "bdr_Common.inl"
+// Bashers Delight Renderer, Copyright (c) 2023 Ulrik Lindahl
+// Licensed under the MIT license https://github.com/Cooolrik/bashers-delight/blob/main/LICENSE
+#include <bdr/bdr.inl>
+
+#include <bdr/bdr_Buffer.h>
+
 #include "bdr_DescriptorIndexingExtension.h"
-#include "bdr_Buffer.h"
 
-#include <stdexcept>
-#include <algorithm>
+namespace bdr
+{
 
-VkResult bdr::DescriptorIndexingExtension::AddRequiredDeviceExtensions( 
+Status bdr::DescriptorIndexingExtension::AddRequiredDeviceExtensions( 
 	VkPhysicalDeviceFeatures2* physicalDeviceFeatures,
-	VkPhysicalDeviceProperties2* physicalDeviceProperties,
+	VkPhysicalDeviceProperties2* /*physicalDeviceProperties*/,
 	std::vector<const char*>* extensionList
 	)
 	{
-	UNREFERENCED_PARAMETER( physicalDeviceProperties );
-
 	// enable extensions needed for ray tracing
 	Extension::AddExtensionToList( extensionList, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME );
 
 	// set up query structs
 
 	// features
-	VR_ADD_STRUCT_TO_VULKAN_LINKED_LIST( physicalDeviceFeatures, this->DescriptorIndexingFeaturesQuery, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES );
+	InitializeLinkedVulkanStructure( physicalDeviceFeatures, this->DescriptorIndexingFeaturesQuery, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES );
 
-	return VkResult::VK_SUCCESS;
+	return status_code::ok;
 	}
 
 bool bdr::DescriptorIndexingExtension::SelectDevice(
-	const VkSurfaceCapabilitiesKHR& surfaceCapabilities,
-	const std::vector<VkSurfaceFormatKHR>& availableSurfaceFormats,
-	const std::vector<VkPresentModeKHR>& availablePresentModes,
-	const VkPhysicalDeviceFeatures2& physicalDeviceFeatures,
-	const VkPhysicalDeviceProperties2& physicalDeviceProperties
+	const VkSurfaceCapabilitiesKHR& /*surfaceCapabilities*/,
+	const std::vector<VkSurfaceFormatKHR>& /*availableSurfaceFormats*/,
+	const std::vector<VkPresentModeKHR>& /*availablePresentModes*/,
+	const VkPhysicalDeviceFeatures2& /*physicalDeviceFeatures*/,
+	const VkPhysicalDeviceProperties2& /*physicalDeviceProperties*/
 	)
 	{
-	UNREFERENCED_PARAMETER( surfaceCapabilities );
-	UNREFERENCED_PARAMETER( availableSurfaceFormats );
-	UNREFERENCED_PARAMETER( availablePresentModes );
-	UNREFERENCED_PARAMETER( physicalDeviceFeatures );
-	UNREFERENCED_PARAMETER( physicalDeviceProperties );
-
 	// check for needed features
 	if( !this->DescriptorIndexingFeaturesQuery.shaderStorageBufferArrayNonUniformIndexing )
 		return false;
@@ -49,15 +45,16 @@ bool bdr::DescriptorIndexingExtension::SelectDevice(
 	return true;
 	}
 
-VkResult bdr::DescriptorIndexingExtension::CreateDevice( VkDeviceCreateInfo* deviceCreateInfo )
+Status bdr::DescriptorIndexingExtension::CreateDevice( VkDeviceCreateInfo* deviceCreateInfo )
 	{
-
-	VR_ADD_STRUCT_TO_VULKAN_LINKED_LIST( deviceCreateInfo, this->DescriptorIndexingFeaturesCreate, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES );
+	InitializeLinkedVulkanStructure( deviceCreateInfo, this->DescriptorIndexingFeaturesCreate, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES );
 
 	// enable required features
 	this->DescriptorIndexingFeaturesCreate.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
 	this->DescriptorIndexingFeaturesCreate.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
 	this->DescriptorIndexingFeaturesCreate.runtimeDescriptorArray = VK_TRUE;
 
-	return VkResult::VK_SUCCESS;
+	return status_code::ok;
 	}
+
+}

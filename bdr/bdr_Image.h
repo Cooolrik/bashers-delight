@@ -1,14 +1,14 @@
 #pragma once
 
-#include "bdr_Renderer.h"
+#include "bdr_Instance.h"
 
 namespace bdr
     {
     class Buffer;
 
-    class Image : public RendererSubmodule
+    class Image : public MainSubmodule
         {
-        BDSubmoduleMacro( Image, RendererSubmodule, Renderer );
+        //BDSubmoduleMacro( Image, RendererSubmodule, Renderer );
 
         private:
 
@@ -63,9 +63,9 @@ namespace bdr
             );
 
 
-            BDGetCustomNameMacro( VkImage, Image, ImageHandle );
-            BDGetMacro( VkImageView, ImageView );
-            BDGetMacro( VmaAllocation, Allocation );
+            //BDGetCustomNameMacro( VkImage, Image, ImageHandle );
+            //BDGetMacro( VkImageView, ImageView );
+            //BDGetMacro( VmaAllocation, Allocation );
         };
 
     // template used to create an image

@@ -1,13 +1,12 @@
 // Bashers Delight Renderer, Copyright (c) 2023 Ulrik Lindahl
 // Licensed under the MIT license https://github.com/Cooolrik/bashers-delight/blob/main/LICENSE
+#include <bdr/bdr.inl>
 
 #include "bdr_Instance.h"
 
 #include "extensions/bdr_DescriptorIndexingExtension.h"
 #include "extensions/bdr_BufferDeviceAddressExtension.h"
 #include "extensions/ray_tracing/bdr_RayTracingExtension.h"
-
-#include "preprocessor_macros\bdr_source_macros.inl"
 
 namespace bdr
 	{

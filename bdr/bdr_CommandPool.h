@@ -3,7 +3,7 @@
 // disable warning for "enum class" since we can't modify Vulkan SDK
 #pragma warning( disable : 26812 )
 
-#include "bdr_Renderer.h"
+#include "bdr_Instance.h"
 #include "bdr_Image.h"
 
 namespace bdr
@@ -13,10 +13,8 @@ namespace bdr
     class VertexBuffer;
     class IndexBuffer;
 
-    class CommandPool : public RendererSubmodule
+    class CommandPool : public MainSubmodule
         {
-        BDSubmoduleMacro( CommandPool, RendererSubmodule, Renderer );
-
         private:
             VkCommandPool Pool = nullptr; 
             std::vector<VkCommandBuffer> Buffers;
@@ -118,8 +116,8 @@ namespace bdr
 
             void TraceRays( RayTracingShaderBindingTable* sbt , uint width, uint height );
 
-            BDGetMacro( int, CurrentBufferIndex );
-            BDGetMacro( bool, IsRecordingBuffer );
-            BDGetMacro( std::vector<VkCommandBuffer>, Buffers );
+            //BDGetMacro( int, CurrentBufferIndex );
+            //BDGetMacro( bool, IsRecordingBuffer );
+            //BDGetMacro( std::vector<VkCommandBuffer>, Buffers );
         };
     };

@@ -17,6 +17,7 @@
 #include <string>
 #include <set>
 #include <memory>
+#include <algorithm>
 
 // include Vulkan and VMA 
 #include <vulkan/vulkan.h>

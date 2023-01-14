@@ -3,14 +3,12 @@
 // disable warning for "enum class" since we can't modify Vulkan SDK
 #pragma warning( disable : 26812 )
 
-#include "bdr_Renderer.h"
+#include "bdr_Instance.h"
 
 namespace bdr
     {
-    class Buffer : public RendererSubmodule
+    class Buffer : public MainSubmodule
         {
-        BDSubmoduleMacro( Buffer, RendererSubmodule, Renderer );
-
         protected:
             VkBuffer BufferHandle = nullptr;
             VmaAllocation Allocation = nullptr;
@@ -25,9 +23,9 @@ namespace bdr
             void* MapMemory();
             void UnmapMemory();
 
-            BDGetCustomNameMacro( VkBuffer, Buffer, BufferHandle );
-            BDGetMacro( VmaAllocation, Allocation );
-            BDGetMacro( VkDeviceSize, BufferSize );
+            //BDGetCustomNameMacro( VkBuffer, Buffer, BufferHandle );
+            //BDGetMacro( VmaAllocation, Allocation );
+            //BDGetMacro( VkDeviceSize, BufferSize );
         };
 
     class BufferTemplate

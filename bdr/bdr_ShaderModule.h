@@ -3,7 +3,7 @@
 // disable warning for "enum class" since we can't modify Vulkan SDK
 #pragma warning( disable : 26812 )
 
-#include "bdr_Renderer.h"
+#include "bdr_Instance.h"
 
 namespace bdr
     {
@@ -30,10 +30,10 @@ namespace bdr
 
             ~ShaderModule();
 
-            BDGetMacro( VkShaderStageFlagBits, Stage );
-            BDGetConstRefMacro( std::vector<char>, Shader );
-            BDGetMacro( char*, Name );
-            BDGetMacro( char*, Entrypoint );
+            //BDGetMacro( VkShaderStageFlagBits, Stage );
+            //BDGetConstRefMacro( std::vector<char>, Shader );
+            //BDGetMacro( char*, Name );
+            //BDGetMacro( char*, Entrypoint );
         };
     };
 
