@@ -12,7 +12,17 @@
 #pragma warning( push )
 #pragma warning( disable : 26812 ) // Disable warning for "enum class"
 #elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-value"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#pragma GCC diagnostic ignored "-Wparentheses"
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough="
 #endif
+
+#include <stdio.h>
+#include <string.h>
 
 // standard library headers
 #include <vector>
@@ -21,6 +31,7 @@
 #include <unordered_map>
 #include <memory>
 #include <algorithm>
+#include <stdexcept>
 
 // include Vulkan and VMA 
 #include <vulkan/vulkan.h>
@@ -36,6 +47,7 @@
 #if defined(_MSC_VER)
 #pragma warning( pop )
 #elif defined(__GNUC__)
+#pragma GCC diagnostic pop
 #endif
 
 namespace bdr

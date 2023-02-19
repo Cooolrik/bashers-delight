@@ -33,7 +33,7 @@ namespace bdr
 			bool layerFound = false;
 			for( const VkLayerProperties& layerProperties : vulkanLayers )
 				{
-				if( _stricmp( layerProperties.layerName, layerName ) == 0 )
+				if( stricmp( layerProperties.layerName, layerName ) == 0 )
 					{
 					layerFound = true;
 					break;
@@ -282,7 +282,7 @@ namespace bdr
 			CheckCall( ext->PostCreateInstance() );
 			}
 
-		return std::move(pThis);
+		return pThis;
 		}
 	
 	status_return<Device*> Instance::CreateDevice( const DeviceTemplate& parameters )

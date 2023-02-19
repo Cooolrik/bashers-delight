@@ -1,8 +1,5 @@
 #pragma once
 
-// disable warning for "enum class" since we can't modify Vulkan SDK
-#pragma warning( disable : 26812 )
-
 #include "bdr_Instance.h"
 
 namespace bdr
@@ -32,7 +29,7 @@ namespace bdr
         {
         public:
             // initial create information
-            VkBufferCreateInfo BufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+            VkBufferCreateInfo BufferCreateInfo = {};
 
             // vma allocation object
             VmaAllocationCreateInfo AllocationCreateInfo = {};

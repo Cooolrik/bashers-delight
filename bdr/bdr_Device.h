@@ -38,7 +38,7 @@ namespace bdr
 			VmaAllocator MemoryAllocatorHandle = VK_NULL_HANDLE;
 
 			// the swapchain and the template used to create the swapchain
-			unique_ptr<Swapchain> Swapchain;
+			unique_ptr<Swapchain> Swapchain_;
 			unique_ptr<SwapchainTemplate> SwapchainTemplate_;
 
 			// the allocated CommandPool objects

@@ -5,8 +5,20 @@
 
 #include "bdr.h"
 
+#include <stdio.h>
+#include <string.h>
+
+#include <ctle/string_funcs.h>
+
 // Source-file additional definitions. 
 // These are macros and functions which are only available in BDR source files
+
+// General function signature macro
+#if defined(_MSC_VER)
+#define BDR_FUNCTION_SIGNATURE __FUNCSIG__
+#elif defined(__GNUC__)
+#define BDR_FUNCTION_SIGNATURE __PRETTY_FUNCTION__ 
+#endif
 
 // STRINGIZE converts a number macro (like __LINE__) into a string. 
 // The STRINGIZE_DETAIL is needed because of how macros work in the preprocessor
@@ -16,8 +28,8 @@
 
 // define logging macros
 #define LogLevel( msg_level )\
-	if( ctle::log_level::##msg_level <= ctle::get_global_log_level() ) {\
-		ctle::log_msg _ctle_log_entry(ctle::log_level::##msg_level,__FILE__,__LINE__,__FUNCTION__); _ctle_log_entry.message()
+	if( ctle::log_level::msg_level <= ctle::get_global_log_level() ) {\
+		ctle::log_msg _ctle_log_entry(ctle::log_level::msg_level,__FILE__,__LINE__,BDR_FUNCTION_SIGNATURE); _ctle_log_entry.message()
 #define LogError LogLevel( error )
 #define LogWarning LogLevel( warning )
 #define LogInfo LogLevel( info )
@@ -31,7 +43,7 @@
 // checks an expression, and logs an error and returns if the statement is not true
 #define Validate( statement , error_code_on_error )\
 	if( !(statement) ) {\
-		const status_code _error_code = error_code_on_error;\
+		const status _error_code = error_code_on_error;\
 		LogError
 #define ValidateEnd\
 		LogEnd;\
@@ -42,8 +54,8 @@
 #define SanityCheck( statement )\
 	if( !(statement) ) {\
 		LogError << "SanityCheck failed: " << std::string(#statement) << LogEnd;\
-		throw std::runtime_error( "SanityCheck " #statement " failed in " __FILE__ " line " STRINGIZE(__LINE__) " function " __FUNCTION__ );\
-		}
+		throw std::runtime_error( "SanityCheck " #statement " failed in " __FILE__ " line " STRINGIZE(__LINE__) " function " STRINGIZE(BDR_FUNCTION_SIGNATURE) );\
+	}
 #else
 #define SanityCheck( statement )
 #endif
@@ -92,5 +104,18 @@ template <class _ListTy , class _Ty> inline void InitializeLinkedVulkanStructure
 		destroy_call;\
 		handle = VK_NULL_HANDLE;\
 		}
+
+namespace bdr
+	{
+	inline int stricmp( const char *s1, const char *s2 )
+		{
+#if defined(_MSC_VER)
+		return _stricmp( s1 , s2 );
+#elif defined(__GNUC__)
+		return strcasecmp( s1 , s2 );
+#endif
+		}
+	}
+
 
 #endif//BDR_SOURCE_FILE

@@ -1,8 +1,5 @@
 #pragma once
 
-// disable warning for "enum class" since we can't modify Vulkan SDK
-#pragma warning( disable : 26812 )
-
 #include "bdr_Instance.h"
 
 namespace bdr

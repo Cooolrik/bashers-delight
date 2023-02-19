@@ -156,13 +156,6 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		target_compile_options( SystemTest PUBLIC -Wall -Wextra -pedantic -Werror)
 	endif()
 
-	# big object files
-	if (MSVC)
-	  target_compile_options( SystemTest PUBLIC /bigobj)
-	else ()
-	  target_compile_options( SystemTest PUBLIC -Wa,-mbig-obj)
-	endif ()
-
 	target_include_directories(	
 		SystemTest 
 		PUBLIC .
@@ -175,7 +168,6 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 
 	target_link_libraries( 	
 		SystemTest 
-		Rpcrt4
 		${Vulkan_LIBRARIES}
 		glfw
 	)

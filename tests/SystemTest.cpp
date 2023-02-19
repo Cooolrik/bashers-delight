@@ -1,9 +1,13 @@
 // Bashers Delight Renderer, Copyright (c) 2023 Ulrik Lindahl
 // Licensed under the MIT license https://github.com/Cooolrik/bashers-delight/blob/main/LICENSE
 
+#if defined(_MSC_VER)
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#elif defined(__GNUC__)
+#endif
+
 #include <iostream>
 
 #include <bdr/bdr.h>
@@ -95,6 +99,8 @@ void run()
 
 	CheckRetValCall( commandPool , device->CreateCommandPool( bdr::CommandPoolTemplate() ) );
 
+	std::cout << commandPool;
+
 	status = Release( instance );
 
 	glfwDestroyWindow( window );
@@ -102,7 +108,7 @@ void run()
 	glfwTerminate();
 	}
 
-int main(int /*argc*/, char* /*argv*/)
+int main(int /*argc*/, char** /*argv*/)
 	{
 	try {
 		run();

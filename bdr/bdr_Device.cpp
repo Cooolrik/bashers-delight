@@ -45,7 +45,7 @@ namespace bdr
 
 	status Device::CreateSwapchain( const bdr::SwapchainTemplate& parameters )
 		{
-		Validate( !this->Swapchain , status_code::already_initialized ) << "Swap chain already setup. Use RecreateSwapChain after first creation." << ValidateEnd;
+		Validate( !this->Swapchain_ , status::already_initialized ) << "Swap chain already setup. Use RecreateSwapChain after first creation." << ValidateEnd;
 
 		this->SwapchainTemplate_ = std::make_unique<SwapchainTemplate>(parameters);
 
@@ -421,7 +421,7 @@ namespace bdr
 		{
 		this->CommandPools.clear();
 
-		this->Swapchain.reset();
+		this->Swapchain_.reset();
 		this->SwapchainTemplate_.reset();
 
 		SafeVkDestroy( MemoryAllocatorHandle , vmaDestroyAllocator( this->MemoryAllocatorHandle ) );
