@@ -9,12 +9,8 @@ namespace bdr
 	{
 	class Instance
 		{
-		public:
-			class Template;
-
 		private:
-			Instance() = default;
-			Instance( const Instance& other );
+			Instance();
 
 			VkInstance InstanceHandle = {};
 			VkDebugUtilsMessengerEXT DebugUtilsMessenger = {};
@@ -22,11 +18,13 @@ namespace bdr
 			bool EnableValidation = false;
 			vector<const char*> ExtensionList;
 
+			unique_ptr<Device> Device_;
+
 			// extensions
 			vector<Extension*> EnabledExtensions;
-			unique_ptr<DescriptorIndexingExtension> DescriptorIndexingExtension;
-			unique_ptr<BufferDeviceAddressExtension> BufferDeviceAddressExtension;
-			unique_ptr<RayTracingExtension> RayTracingExtension;
+			unique_ptr<DescriptorIndexingExtension> DescriptorIndexingExtension_;
+			unique_ptr<BufferDeviceAddressExtension> BufferDeviceAddressExtension_;
+			unique_ptr<RayTracingExtension> RayTracingExtension_;
 
 			//
 			//struct TargetImage
@@ -66,7 +64,7 @@ namespace bdr
 			//VkSurfaceCapabilitiesKHR SurfaceCapabilities{};
 			//std::vector<VkSurfaceFormatKHR> AvailableSurfaceFormats;
 			//std::vector<VkPresentModeKHR> AvailablePresentModes;
-			//
+			
 			//VkPhysicalDeviceFeatures2 PhysicalDeviceFeatures{};
 			//VkPhysicalDeviceProperties2 PhysicalDeviceProperties{};
 
@@ -92,21 +90,18 @@ namespace bdr
 			///// create base vulkan buffer
 			//template<class B,class BT> B* NewBuffer( const BT& bt ) const;
 
-			//VkCommandBuffer BeginInternalCommandBuffer() const;
-			//void EndAndSubmitInternalCommandBuffer( VkCommandBuffer buffer ) const;
+			VkCommandBuffer BeginInternalCommandBuffer() const;
+			void EndAndSubmitInternalCommandBuffer( VkCommandBuffer buffer ) const;
 
 		public:
-			static StatusPair<unique_ptr<Instance>> Create( const Template& parameters );
-		
-			// template method which makes a unique_ptr to a submodule 
-			template<typename T, typename... Args>
-			std::unique_ptr<T> Make(Args&&... args)
-			{
-				return std::unique_ptr<T>(new T(this, std::forward<Args>(args)...));
-			}
+			static status_return<unique_ptr<Instance>> Create( const InstanceTemplate& parameters );
 
-			//// setup the device with the created surface
-			//void CreateDevice( VkSurfaceKHR surface );
+			// create the device of the instance. 
+			// returns a pointer to the device on success
+			status_return<Device*> CreateDevice( const DeviceTemplate& parameters );
+
+			// explicitly cleanups the object, and also clears all objects owned by it
+			status Cleanup();
 
 			///// create the rendering swap chain
 			//struct CreateSwapChainParameters
@@ -166,8 +161,19 @@ namespace bdr
 
 			~Instance();
 
-			//// public get methods
-			VkInstance GetInstance() const { return this->InstanceHandle; }
+			// public get methods
+			
+			// get the handle to the vulkan instance
+			VkInstance GetInstanceHandle() const { return this->InstanceHandle; }
+
+			// get the Instance's Device object 
+			bdr::Device *GetDevice() const { return this->Device_.get(); }
+
+			// get the Instance's extensions
+			vector<Extension*> GetEnabledExtensions() const { return this->EnabledExtensions; }
+			bdr::DescriptorIndexingExtension* GetDescriptorIndexingExtension() const { return this->DescriptorIndexingExtension_.get(); }
+			bdr::BufferDeviceAddressExtension* GetBufferDeviceAddressExtension() const { return this->BufferDeviceAddressExtension_.get(); }
+			bdr::RayTracingExtension* GetRayTracingExtension() const { return this->RayTracingExtension_.get(); }
 
 			//BDRGetMacro( VkPhysicalDevice, PhysicalDevice );
 			//BDRGetMacro( VkDevice, Device );
@@ -188,13 +194,11 @@ namespace bdr
 			//const Image* GetColorTargetImage( uint index ) const { return this->TargetImages[index].Color.get(); }
 			//const Image* GetDepthTargetImage( uint index ) const { return this->TargetImages[index].Depth.get(); }
 
-			//// get extensions
-			//RayTracingExtension* GetRayTracingExtension() const { return this->RayTracingEXT; }
 
 		};
 
 	// Instance template creation parameters
-	class Instance::Template
+	class InstanceTemplate
 		{
 		public:
 			// the application name

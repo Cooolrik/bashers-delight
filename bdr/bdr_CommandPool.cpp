@@ -1,301 +1,331 @@
-#include "bdr_CommandPool.h"
-#include "bdr_GraphicsPipeline.h"
-#include "bdr_ComputePipeline.h"
-#include "bdr_VertexBuffer.h"
-#include "bdr_IndexBuffer.h"
-#include "bdr_Image.h"
+// Bashers Delight Renderer, Copyright (c) 2023 Ulrik Lindahl
+// Licensed under the MIT license https://github.com/Cooolrik/bashers-delight/blob/main/LICENSE
+#include <bdr/bdr.inl>
 
-#include "Extensions/bdr_RayTracingExtension.h"
-#include "Extensions/bdr_RayTracingPipeline.h"
-#include "Extensions/bdr_RayTracingShaderBindingTable.h"
+#include "bdr_CommandPool.h"
+
+//#include "bdr_GraphicsPipeline.h"
+//#include "bdr_ComputePipeline.h"
+//#include "bdr_VertexBuffer.h"
+//#include "bdr_IndexBuffer.h"
+//#include "bdr_Image.h"
+
+//#include "Extensions/bdr_RayTracingExtension.h"
+//#include "Extensions/bdr_RayTracingPipeline.h"
+//#include "Extensions/bdr_RayTracingShaderBindingTable.h"
 
 #include <stdexcept>
 #include <algorithm>
 
-using std::runtime_error;
-
-// makes sure the return value is VK_SUCCESS or throws an exception
-#define VLK_CALL( s ) if( s != VK_SUCCESS ) { throw runtime_error( "Vulkan call " #s " failed (did not return VK_SUCCESS)"); }
-#define ASSERT_RECORDING() if( !this->IsRecordingBuffer ) { throw runtime_error( "Error: " __FUNCTION__ "(): currently not recording buffer."); }
-
-bdr::CommandPool::~CommandPool()
-	{
-	// the allocated buffers will be automatically deallocated
-	vkDestroyCommandPool( this->Module->GetDevice(), Pool, nullptr );
-	}
-
-void bdr::CommandPool::ResetCommandPool()
-	{
-	// make sure we are not recording
-	if( this->IsRecordingBuffer )
+namespace bdr
+{
+	CommandPool::CommandPool( const Instance* _module, VkCommandPool commandPoolHandle, const std::vector<VkCommandBuffer> &bufferObjects ) : MainSubmodule(_module) , CommandPoolHandle( commandPoolHandle ) , BuffersCount( bufferObjects.size() )
 		{
-		throw runtime_error( "Error: ResetCommandPool(), currently recording buffer. End buffer before begin new or resetting." );
+		LogThis;
+
+		this->SetupCommandBuffers( bufferObjects );
 		}
 
-	VLK_CALL( vkResetCommandPool( this->Module->GetDevice(), this->Pool, 0 ) );
-
-	// reset index
-	this->CurrentBufferIndex = -1;
-	}
-
-VkCommandBuffer bdr::CommandPool::BeginCommandBuffer()
-	{
-	// make sure we are not already recording
-	if( this->IsRecordingBuffer )
+	CommandPool::~CommandPool()
 		{
-		throw runtime_error( "Error: BeginCommandBuffer(), currently recording buffer. End buffer before begin new or resetting." );
-		}
-	this->IsRecordingBuffer = true;
+		LogThis;
 
-	// step up buffer index, make sure we are not out of buffers
-	++this->CurrentBufferIndex;
-	if( (size_t)this->CurrentBufferIndex >= this->Buffers.size() )
-		{
-		throw runtime_error( "Error: BeginCommandBuffer(), out of buffers. Allocate enough buffers when allocating pool." );
+		// the allocated buffers will be automatically deallocated
+		vkDestroyCommandPool( this->Module->GetDevice()->GetDeviceHandle(), this->CommandPoolHandle, nullptr );
+
+		this->DeleteCommandBuffers();
 		}
 
-	// begin the buffer
-	VkCommandBufferBeginInfo commandBufferBeginInfo{};
-	commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	commandBufferBeginInfo.flags = 0; 
-	commandBufferBeginInfo.pInheritanceInfo = nullptr; 
-	VLK_CALL( vkBeginCommandBuffer( this->Buffers[this->CurrentBufferIndex], &commandBufferBeginInfo ) );
+	void CommandPool::SetupCommandBuffers( const std::vector<VkCommandBuffer> &bufferObjects )
+		{
+		SanityCheck( bufferObjects.size() == this->BuffersCount );
 
-	// return buffer handle 
-	return this->Buffers[this->CurrentBufferIndex];
-	}
+		// fill in the buffer objects
+		this->Buffers = new CommandBuffer[this->BuffersCount];
+		for( size_t inx=0; inx<this->BuffersCount; ++inx )
+			{
+			this->Buffers[inx].CommandPool_ = this;
+			this->Buffers[inx].BufferIndex = inx;
+			this->Buffers[inx].CommandBufferHandle = bufferObjects[inx];
+			}
+		}
 
-void bdr::CommandPool::BeginRenderPass( VkFramebuffer destFramebuffer )
-	{
-	ASSERT_RECORDING();
+	void CommandPool::DeleteCommandBuffers()
+		{
+		SanityCheck( this->Buffers );
 
-	VkRenderPassBeginInfo renderPassBeginInfo{};
-	renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderPassBeginInfo.renderPass = this->Module->RenderPass;
-	renderPassBeginInfo.framebuffer = destFramebuffer;
+		delete [] this->Buffers;
+		}
 
-	renderPassBeginInfo.renderArea.offset = { 0, 0 };
-	renderPassBeginInfo.renderArea.extent = this->Module->RenderExtent;
 
-	VkClearValue clearValues[2]{};
-	clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
-	clearValues[1].depthStencil = { 1.0f, 0 };
-	renderPassBeginInfo.clearValueCount = 2;
-	renderPassBeginInfo.pClearValues = clearValues;
+	status CommandPool::ResetCommandPool()
+		{
+		Validate( !this->IsRecording() , status_code::invalid ) << "Cannot reset command pool, there is at least one buffer still recording" << ValidateEnd;
 
-	vkCmdBeginRenderPass( this->Buffers[this->CurrentBufferIndex], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
-	}
+		CheckCall( vkResetCommandPool( this->Module->GetDevice()->GetDeviceHandle(), this->CommandPoolHandle, 0 ) );
+		return status_code::ok;
+		}
 
-void bdr::CommandPool::EndRenderPass()
-	{
-	ASSERT_RECORDING();
+	status_return<CommandBuffer*> CommandPool::BeginCommandBuffer()
+		{
+		Validate( this->ActiveBuffers.size() < this->BuffersCount , status_code::invalid ) << "Cannot allocate buffer for recording, they are all used up." << ValidateEnd;
 
-	vkCmdEndRenderPass( this->Buffers[this->CurrentBufferIndex] );
-	}
+		// look for an available buffer
+		// round robin look using CurrentBufferIndex
+		for(;;)
+			{
+			this->CurrentBufferIndex = (this->CurrentBufferIndex + 1) % this->BuffersCount;
+			if( this->ActiveBuffers.find( this->CurrentBufferIndex ) == this->ActiveBuffers.end() )
+				break;
+			}
 
-void bdr::CommandPool::BindPipeline( Pipeline* pipeline )
-	{
-	ASSERT_RECORDING();
+		SanityCheck( this->Buffers[this->CurrentBufferIndex].BufferIndex == this->CurrentBufferIndex );
 
-	vkCmdBindPipeline( this->Buffers[this->CurrentBufferIndex], pipeline->GetPipelineBindPoint(), pipeline->GetPipeline() );
-	}
+		// begin the buffer
+		VkCommandBufferBeginInfo commandBufferBeginInfo{};
+		commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		commandBufferBeginInfo.flags = 0; 
+		commandBufferBeginInfo.pInheritanceInfo = nullptr; 
+		CheckCall( vkBeginCommandBuffer( this->Buffers[this->CurrentBufferIndex].CommandBufferHandle, &commandBufferBeginInfo ) );
 
-void bdr::CommandPool::BindVertexBuffer( VertexBuffer* buffer )
-	{
-	ASSERT_RECORDING();
+		// return buffer pointer
+		return &this->Buffers[this->CurrentBufferIndex];
+		}
 
-	VkBuffer vertexBuffers[] = { buffer->GetBuffer() };
-	VkDeviceSize offsets[] = { 0 };
-	vkCmdBindVertexBuffers( this->Buffers[this->CurrentBufferIndex], 0, 1, vertexBuffers, offsets );
-	}
+	status CommandPool::EndCommandBuffer( CommandBuffer *commandBuffer )
+		{
+		Validate( this->ActiveBuffers.find( commandBuffer->BufferIndex ) != this->ActiveBuffers.end() , status_code::invalid_param ) << "Invalid parameter: The command buffer " << commandBuffer << "is not recording" << ValidateEnd;
 
-void bdr::CommandPool::BindIndexBuffer( IndexBuffer* buffer )
-	{
-	ASSERT_RECORDING();
+		SanityCheck( &this->Buffers[commandBuffer->BufferIndex] == commandBuffer );
 
-	vkCmdBindIndexBuffer( this->Buffers[this->CurrentBufferIndex], buffer->GetBuffer(), 0, buffer->GetIndexType() );
-	}
+		// done recording to the buffer
+		CheckCall( vkEndCommandBuffer( commandBuffer->CommandBufferHandle ) );
+		
+		// remove from active set
+		this->ActiveBuffers.erase( commandBuffer->BufferIndex );
+		return status_code::ok;
+		}
 
-void bdr::CommandPool::BindDescriptorSet( Pipeline* pipeline, VkDescriptorSet set )
-	{
-	ASSERT_RECORDING();
+	CommandBuffer::CommandBuffer()
+		{
+		}
 
-	vkCmdBindDescriptorSets( this->Buffers[this->CurrentBufferIndex], pipeline->GetPipelineBindPoint(), pipeline->GetPipelineLayout(), 0, 1, &set, 0, nullptr );
-	}
+	CommandBuffer::~CommandBuffer()
+		{
+		}
 
-void bdr::CommandPool::PushConstants( Pipeline* pipeline , VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pValues )
-	{
-	ASSERT_RECORDING();
+	void CommandBuffer::BeginRenderPass( VkRenderPass renderPass , VkFramebuffer framebuffer , VkRect2D renderArea , size_t clearValuesCount , const VkClearValue *clearValues )
+		{
+		VkRenderPassBeginInfo renderPassBeginInfo{};
+		renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassBeginInfo.renderPass = renderPass;
+		renderPassBeginInfo.framebuffer = framebuffer;
+		renderPassBeginInfo.renderArea = renderArea;
+		renderPassBeginInfo.clearValueCount = (uint)clearValuesCount;
+		renderPassBeginInfo.pClearValues = clearValues;
 
-	vkCmdPushConstants( this->Buffers[this->CurrentBufferIndex], pipeline->GetPipelineLayout(), stageFlags, offset, size, pValues );
-	}
+		vkCmdBeginRenderPass( this->CommandBufferHandle, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
+		}
 
-void bdr::CommandPool::SetViewport( VkViewport viewport )
-	{
-	ASSERT_RECORDING();
+	void CommandBuffer::EndRenderPass()
+		{
+		vkCmdEndRenderPass( this->CommandBufferHandle );
+		}
 
-	vkCmdSetViewport( this->Buffers[this->CurrentBufferIndex], 0, 1, &viewport );
-	}
+	//void CommandBuffer::BindPipeline( Pipeline* pipeline )
+	//	{
+	//	vkCmdBindPipeline( this->Buffers[this->CurrentBufferIndex], pipeline->GetPipelineBindPoint(), pipeline->GetPipeline() );
+	//	}
 
-void bdr::CommandPool::SetViewport( float x, float y, float width, float height, float minDepth, float maxDepth )
-	{
-	VkViewport viewport;
-	viewport.x = x;
-	viewport.y = y;
-	viewport.width = width;
-	viewport.height = height;
-	viewport.minDepth = minDepth;
-	viewport.maxDepth = maxDepth;
-	this->SetViewport( viewport );
-	}
+	//void CommandBuffer::BindVertexBuffer( VertexBuffer* buffer )
+	//	{
+	//	ASSERT_RECORDING();
 
-void bdr::CommandPool::SetScissorRectangle( VkRect2D scissorRectangle )
-	{
-	ASSERT_RECORDING();
+	//	VkBuffer vertexBuffers[] = { buffer->GetBuffer() };
+	//	VkDeviceSize offsets[] = { 0 };
+	//	vkCmdBindVertexBuffers( this->Buffers[this->CurrentBufferIndex], 0, 1, vertexBuffers, offsets );
+	//	}
 
-	vkCmdSetScissor( this->Buffers[this->CurrentBufferIndex], 0, 1, &scissorRectangle );
-	}
+	//void CommandBuffer::BindIndexBuffer( IndexBuffer* buffer )
+	//	{
+	//	ASSERT_RECORDING();
 
-void bdr::CommandPool::SetScissorRectangle( int32_t x, int32_t y, uint32_t width, uint32_t height )
-	{
-	VkRect2D scissorRectangle;
-	scissorRectangle.offset.x = x;
-	scissorRectangle.offset.y = y;
-	scissorRectangle.extent.width = width;
-	scissorRectangle.extent.height = height;
-	this->SetScissorRectangle( scissorRectangle );
-	}
+	//	vkCmdBindIndexBuffer( this->Buffers[this->CurrentBufferIndex], buffer->GetBuffer(), 0, buffer->GetIndexType() );
+	//	}
 
-void bdr::CommandPool::UpdateBuffer( Buffer* buffer, VkDeviceSize dstOffset, uint32_t dataSize, const void* pData )
-	{
-	ASSERT_RECORDING();
+	//void CommandBuffer::BindDescriptorSet( Pipeline* pipeline, VkDescriptorSet set )
+	//	{
+	//	ASSERT_RECORDING();
 
-	vkCmdUpdateBuffer( this->Buffers[this->CurrentBufferIndex], buffer->GetBuffer(), dstOffset, dataSize, pData );
-	}
+	//	vkCmdBindDescriptorSets( this->Buffers[this->CurrentBufferIndex], pipeline->GetPipelineBindPoint(), pipeline->GetPipelineLayout(), 0, 1, &set, 0, nullptr );
+	//	}
 
-void bdr::CommandPool::Draw( uint vertexCount )
-	{
-	ASSERT_RECORDING();
+	//void CommandBuffer::PushConstants( Pipeline* pipeline , VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pValues )
+	//	{
+	//	ASSERT_RECORDING();
 
-	vkCmdDraw( this->Buffers[this->CurrentBufferIndex], vertexCount, 1, 0, 0 );
-	}
+	//	vkCmdPushConstants( this->Buffers[this->CurrentBufferIndex], pipeline->GetPipelineLayout(), stageFlags, offset, size, pValues );
+	//	}
 
-void bdr::CommandPool::DrawIndexed( uint indexCount, uint instanceCount, uint firstIndex, int vertexOffset, uint firstInstance )
-	{
-	ASSERT_RECORDING();
+	//void CommandBuffer::SetViewport( VkViewport viewport )
+	//	{
+	//	ASSERT_RECORDING();
 
-	vkCmdDrawIndexed( this->Buffers[this->CurrentBufferIndex], indexCount, instanceCount, firstIndex, vertexOffset, firstInstance );
-	}
+	//	vkCmdSetViewport( this->Buffers[this->CurrentBufferIndex], 0, 1, &viewport );
+	//	}
 
-void bdr::CommandPool::DrawIndexedIndirect( const Buffer *buffer, VkDeviceSize offset, uint drawCount, uint stride )
-	{
-	ASSERT_RECORDING();
+	//void CommandBuffer::SetViewport( float x, float y, float width, float height, float minDepth, float maxDepth )
+	//	{
+	//	VkViewport viewport;
+	//	viewport.x = x;
+	//	viewport.y = y;
+	//	viewport.width = width;
+	//	viewport.height = height;
+	//	viewport.minDepth = minDepth;
+	//	viewport.maxDepth = maxDepth;
+	//	this->SetViewport( viewport );
+	//	}
 
-	vkCmdDrawIndexedIndirect( this->Buffers[this->CurrentBufferIndex], buffer->GetBuffer(), offset, drawCount, stride );
-	}
+	//void CommandBuffer::SetScissorRectangle( VkRect2D scissorRectangle )
+	//	{
+	//	ASSERT_RECORDING();
 
-void bdr::CommandPool::QueueUpBufferMemoryBarrier( VkBuffer buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkDeviceSize offset, VkDeviceSize size )
-	{
-	VkBufferMemoryBarrier bufferMemoryBarrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-	bufferMemoryBarrier.srcAccessMask = srcAccessMask;
-	bufferMemoryBarrier.dstAccessMask = dstAccessMask;
-	bufferMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	bufferMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	bufferMemoryBarrier.buffer = buffer;
-	bufferMemoryBarrier.offset = offset;
-	bufferMemoryBarrier.size = size;
-	this->BufferMemoryBarriers.push_back( bufferMemoryBarrier );
-	}
+	//	vkCmdSetScissor( this->Buffers[this->CurrentBufferIndex], 0, 1, &scissorRectangle );
+	//	}
 
-void bdr::CommandPool::QueueUpBufferMemoryBarrier( const Buffer* buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkDeviceSize offset, VkDeviceSize size )
-	{
-	this->QueueUpBufferMemoryBarrier(
-		buffer->GetBuffer(),
-		srcAccessMask,
-		dstAccessMask,
-		offset,
-		(size == VkDeviceSize( ~0 )) ? buffer->GetBufferSize() : size
-	);
-	}
+	//void CommandBuffer::SetScissorRectangle( int32_t x, int32_t y, uint32_t width, uint32_t height )
+	//	{
+	//	VkRect2D scissorRectangle;
+	//	scissorRectangle.offset.x = x;
+	//	scissorRectangle.offset.y = y;
+	//	scissorRectangle.extent.width = width;
+	//	scissorRectangle.extent.height = height;
+	//	this->SetScissorRectangle( scissorRectangle );
+	//	}
 
-void bdr::CommandPool::QueueUpImageMemoryBarrier( VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkImageAspectFlags aspectMask )
-	{
-	VkImageMemoryBarrier imageMemoryBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-	imageMemoryBarrier.srcAccessMask = srcAccessMask;
-	imageMemoryBarrier.dstAccessMask = dstAccessMask;
-	imageMemoryBarrier.oldLayout = oldLayout;
-	imageMemoryBarrier.newLayout = newLayout;
-	imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	imageMemoryBarrier.image = image;
-	imageMemoryBarrier.subresourceRange.aspectMask = aspectMask;
-	imageMemoryBarrier.subresourceRange.baseMipLevel = 0; 
-	imageMemoryBarrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-	imageMemoryBarrier.subresourceRange.baseArrayLayer = 0;
-	imageMemoryBarrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-	this->ImageMemoryBarriers.push_back( imageMemoryBarrier );
-	}
+	//void CommandBuffer::UpdateBuffer( Buffer* buffer, VkDeviceSize dstOffset, uint32_t dataSize, const void* pData )
+	//	{
+	//	ASSERT_RECORDING();
 
-void bdr::CommandPool::QueueUpImageMemoryBarrier( const Image* image, VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkImageAspectFlags aspectMask )
-	{
-	this->QueueUpImageMemoryBarrier(
-		image->GetImage(),
-		oldLayout,
-		newLayout,
-		srcAccessMask,
-		dstAccessMask,
-		aspectMask
-		);
-	}
+	//	vkCmdUpdateBuffer( this->Buffers[this->CurrentBufferIndex], buffer->GetBuffer(), dstOffset, dataSize, pData );
+	//	}
 
-void bdr::CommandPool::PipelineBarrier( VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask )
-	{
-	ASSERT_RECORDING();
+	//void CommandBuffer::Draw( uint vertexCount )
+	//	{
+	//	ASSERT_RECORDING();
 
-	VkBufferMemoryBarrier* pbuf = this->BufferMemoryBarriers.data();
-	VkImageMemoryBarrier* pimg = this->ImageMemoryBarriers.data();
+	//	vkCmdDraw( this->Buffers[this->CurrentBufferIndex], vertexCount, 1, 0, 0 );
+	//	}
 
-	vkCmdPipelineBarrier( 
-		this->Buffers[this->CurrentBufferIndex], 
-		srcStageMask, 
-		dstStageMask, 
-		VK_DEPENDENCY_BY_REGION_BIT,
-		0, nullptr, 
-		(uint)this->BufferMemoryBarriers.size(), pbuf,
-		(uint)this->ImageMemoryBarriers.size(), pimg
-		);
+	//void CommandBuffer::DrawIndexed( uint indexCount, uint instanceCount, uint firstIndex, int vertexOffset, uint firstInstance )
+	//	{
+	//	ASSERT_RECORDING();
 
-	BufferMemoryBarriers.clear();
-	ImageMemoryBarriers.clear();
-	}
+	//	vkCmdDrawIndexed( this->Buffers[this->CurrentBufferIndex], indexCount, instanceCount, firstIndex, vertexOffset, firstInstance );
+	//	}
 
-void bdr::CommandPool::DispatchCompute( uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ )
-	{
-	ASSERT_RECORDING();
+	//void CommandBuffer::DrawIndexedIndirect( const Buffer *buffer, VkDeviceSize offset, uint drawCount, uint stride )
+	//	{
+	//	ASSERT_RECORDING();
 
-	vkCmdDispatch( this->Buffers[this->CurrentBufferIndex], groupCountX, groupCountY, groupCountZ );
-	}
+	//	vkCmdDrawIndexedIndirect( this->Buffers[this->CurrentBufferIndex], buffer->GetBuffer(), offset, drawCount, stride );
+	//	}
 
-void bdr::CommandPool::TraceRays( RayTracingShaderBindingTable* sbt , uint width , uint height )
-	{
-	ASSERT_RECORDING();
+	//void CommandBuffer::QueueUpBufferMemoryBarrier( VkBuffer buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkDeviceSize offset, VkDeviceSize size )
+	//	{
+	//	VkBufferMemoryBarrier bufferMemoryBarrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+	//	bufferMemoryBarrier.srcAccessMask = srcAccessMask;
+	//	bufferMemoryBarrier.dstAccessMask = dstAccessMask;
+	//	bufferMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	//	bufferMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	//	bufferMemoryBarrier.buffer = buffer;
+	//	bufferMemoryBarrier.offset = offset;
+	//	bufferMemoryBarrier.size = size;
+	//	this->BufferMemoryBarriers.push_back( bufferMemoryBarrier );
+	//	}
 
-	RayTracingExtension::vkCmdTraceRaysKHR(
-		this->Buffers[this->CurrentBufferIndex],
-		&sbt->GetRaygenDeviceAddress(),
-		&sbt->GetMissDeviceAddress(),
-		&sbt->GetClosestHitDeviceAddress(),
-		&sbt->GetCallableDeviceAddress(),
-		width,
-		height,
-		1 );
-	}
+	//void CommandBuffer::QueueUpBufferMemoryBarrier( const Buffer* buffer, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkDeviceSize offset, VkDeviceSize size )
+	//	{
+	//	this->QueueUpBufferMemoryBarrier(
+	//		buffer->GetBuffer(),
+	//		srcAccessMask,
+	//		dstAccessMask,
+	//		offset,
+	//		(size == VkDeviceSize( ~0 )) ? buffer->GetBufferSize() : size
+	//	);
+	//	}
 
-void bdr::CommandPool::EndCommandBuffer()
-	{
-	ASSERT_RECORDING();
+	//void CommandBuffer::QueueUpImageMemoryBarrier( VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkImageAspectFlags aspectMask )
+	//	{
+	//	VkImageMemoryBarrier imageMemoryBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+	//	imageMemoryBarrier.srcAccessMask = srcAccessMask;
+	//	imageMemoryBarrier.dstAccessMask = dstAccessMask;
+	//	imageMemoryBarrier.oldLayout = oldLayout;
+	//	imageMemoryBarrier.newLayout = newLayout;
+	//	imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	//	imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	//	imageMemoryBarrier.image = image;
+	//	imageMemoryBarrier.subresourceRange.aspectMask = aspectMask;
+	//	imageMemoryBarrier.subresourceRange.baseMipLevel = 0; 
+	//	imageMemoryBarrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+	//	imageMemoryBarrier.subresourceRange.baseArrayLayer = 0;
+	//	imageMemoryBarrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+	//	this->ImageMemoryBarriers.push_back( imageMemoryBarrier );
+	//	}
 
-	// done with the buffer
-	VLK_CALL( vkEndCommandBuffer( this->Buffers[this->CurrentBufferIndex] ) );
-	this->IsRecordingBuffer = false;
+	//void CommandBuffer::QueueUpImageMemoryBarrier( const Image* image, VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkImageAspectFlags aspectMask )
+	//	{
+	//	this->QueueUpImageMemoryBarrier(
+	//		image->GetImage(),
+	//		oldLayout,
+	//		newLayout,
+	//		srcAccessMask,
+	//		dstAccessMask,
+	//		aspectMask
+	//		);
+	//	}
+
+	//void CommandBuffer::PipelineBarrier( VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask )
+	//	{
+	//	ASSERT_RECORDING();
+
+	//	VkBufferMemoryBarrier* pbuf = this->BufferMemoryBarriers.data();
+	//	VkImageMemoryBarrier* pimg = this->ImageMemoryBarriers.data();
+
+	//	vkCmdPipelineBarrier( 
+	//		this->Buffers[this->CurrentBufferIndex], 
+	//		srcStageMask, 
+	//		dstStageMask, 
+	//		VK_DEPENDENCY_BY_REGION_BIT,
+	//		0, nullptr, 
+	//		(uint)this->BufferMemoryBarriers.size(), pbuf,
+	//		(uint)this->ImageMemoryBarriers.size(), pimg
+	//		);
+
+	//	BufferMemoryBarriers.clear();
+	//	ImageMemoryBarriers.clear();
+	//	}
+
+	//void CommandBuffer::DispatchCompute( uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ )
+	//	{
+	//	ASSERT_RECORDING();
+
+	//	vkCmdDispatch( this->Buffers[this->CurrentBufferIndex], groupCountX, groupCountY, groupCountZ );
+	//	}
+
+	//void CommandBuffer::TraceRays( RayTracingShaderBindingTable* sbt , uint width , uint height )
+	//	{
+	//	ASSERT_RECORDING();
+
+	//	RayTracingExtension::vkCmdTraceRaysKHR(
+	//		this->Buffers[this->CurrentBufferIndex],
+	//		&sbt->GetRaygenDeviceAddress(),
+	//		&sbt->GetMissDeviceAddress(),
+	//		&sbt->GetClosestHitDeviceAddress(),
+	//		&sbt->GetCallableDeviceAddress(),
+	//		width,
+	//		height,
+	//		1 );
+	//	}
+
 	}

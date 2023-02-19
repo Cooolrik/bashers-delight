@@ -6,7 +6,7 @@ project( bashers-delight )
 # dependendices
 
 # Vulkan SDK needs to be installed
-find_package( Vulkan REQUIRED FATAL_ERROR )
+find_package( Vulkan REQUIRED )
 
 # glm 
 FetchContent_Declare(
@@ -24,7 +24,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable( vma )			
 			
-# ctle
+# ctle 
 FetchContent_Declare(
 	ctle
 	GIT_REPOSITORY https://github.com/Cooolrik/ctle.git
@@ -72,41 +72,12 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		bdr_files
 
 		./bdr/bdr.h
-		./bdr/preprocessor_macros/bdr_source_macros.inl
+		./bdr/bdr.inl
 		
-		./bdr/bdr_Instance.h
-		./bdr/bdr_Instance.cpp
-		
-		./bdr/implementations/bdr_ctle_implementation.cpp
-		./bdr/implementations/bdr_vma_implementation.cpp
-
-
-		./bdr/extensions/bdr_Extension.h
-		./bdr/extensions/bdr_Extension.cpp
-
-		./bdr/extensions/bdr_BufferDeviceAddressExtension.h
-		./bdr/extensions/bdr_BufferDeviceAddressExtension.cpp
-
-		./bdr/extensions/bdr_DescriptorIndexingExtension.h
-		./bdr/extensions/bdr_DescriptorIndexingExtension.cpp
-
-		#./bdr/extensions/RayTracing/bdr_RayTracingAccelerationStructure.cpp
-		#./bdr/extensions/RayTracing/bdr_RayTracingAccelerationStructure.h
-		#./bdr/extensions/RayTracing/bdr_RayTracingBLASEntry.cpp
-		#./bdr/extensions/RayTracing/bdr_RayTracingBLASEntry.h
-		./bdr/extensions/ray_tracing/bdr_RayTracingExtension.cpp
-		./bdr/extensions/ray_tracing/bdr_RayTracingExtension.h
-		#./bdr/extensions/RayTracing/bdr_RayTracingPipeline.cpp
-		#./bdr/extensions/RayTracing/bdr_RayTracingPipeline.h
-		#./bdr/extensions/RayTracing/bdr_RayTracingShaderBindingTable.cpp
-		#./bdr/extensions/RayTracing/bdr_RayTracingShaderBindingTable.h
-		#./bdr/extensions/RayTracing/bdr_RayTracingTLASEntry.cpp
-		#./bdr/extensions/RayTracing/bdr_RayTracingTLASEntry.h
-
 		#./bdr/bdr_Buffer.cpp
 		#./bdr/bdr_Buffer.h
-		#./bdr/bdr_CommandPool.cpp
-		#./bdr/bdr_CommandPool.h
+		./bdr/bdr_CommandPool.cpp
+		./bdr/bdr_CommandPool.h
 		#./bdr/bdr_Common.inl
 		#./bdr/bdr_ComputePipeline.cpp
 		#./bdr/bdr_ComputePipeline.h
@@ -114,8 +85,10 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		#./bdr/bdr_DescriptorPool.h
 		#./bdr/bdr_DescriptorSetLayout.cpp
 		#./bdr/bdr_DescriptorSetLayout.h
-		#./bdr/bdr_Extension.cpp
-		#./bdr/bdr_Extension.h
+		./bdr/bdr_Device.h
+		./bdr/bdr_Device.cpp
+		./bdr/bdr_Extension.cpp
+		./bdr/bdr_Extension.h
 		#./bdr/bdr_GraphicsPipeline.cpp
 		#./bdr/bdr_GraphicsPipeline.h
 		#./bdr/bdr_Helpers.cpp
@@ -124,15 +97,42 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		#./bdr/bdr_Image.h
 		#./bdr/bdr_IndexBuffer.cpp
 		#./bdr/bdr_IndexBuffer.h
+		./bdr/bdr_Instance.h
+		./bdr/bdr_Instance.cpp
 		#./bdr/bdr_Pipeline.cpp
 		#./bdr/bdr_Pipeline.h
-
 		#./bdr/bdr_Sampler.cpp
 		#./bdr/bdr_Sampler.h
 		#./bdr/bdr_ShaderModule.cpp
 		#./bdr/bdr_ShaderModule.h
+		./bdr/bdr_Swapchain.cpp
+		./bdr/bdr_Swapchain.h
 		#./bdr/bdr_VertexBuffer.cpp
 		#./bdr/bdr_VertexBuffer.h
+
+		./bdr/extensions/bdr_BufferDeviceAddressExtension.h
+		./bdr/extensions/bdr_BufferDeviceAddressExtension.cpp
+
+		./bdr/extensions/bdr_DescriptorIndexingExtension.h
+		./bdr/extensions/bdr_DescriptorIndexingExtension.cpp
+
+		./bdr/extensions/ray_tracing/bdr_RayTracingExtension.h
+		./bdr/extensions/ray_tracing/bdr_RayTracingExtension.cpp
+		#./bdr/extensions/RayTracing/bdr_RayTracingAccelerationStructure.cpp
+		#./bdr/extensions/RayTracing/bdr_RayTracingAccelerationStructure.h
+		#./bdr/extensions/RayTracing/bdr_RayTracingBLASEntry.cpp
+		#./bdr/extensions/RayTracing/bdr_RayTracingBLASEntry.h
+
+		#./bdr/extensions/RayTracing/bdr_RayTracingPipeline.cpp
+		#./bdr/extensions/RayTracing/bdr_RayTracingPipeline.h
+		#./bdr/extensions/RayTracing/bdr_RayTracingShaderBindingTable.cpp
+		#./bdr/extensions/RayTracing/bdr_RayTracingShaderBindingTable.h
+		#./bdr/extensions/RayTracing/bdr_RayTracingTLASEntry.cpp
+		#./bdr/extensions/RayTracing/bdr_RayTracingTLASEntry.h
+
+
+		./bdr/implementations/bdr_ctle_implementation.cpp
+		./bdr/implementations/bdr_vma_implementation.cpp
 		
 		)
 		

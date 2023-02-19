@@ -2,7 +2,7 @@
 // Licensed under the MIT license https://github.com/Cooolrik/bashers-delight/blob/main/LICENSE
 #pragma once
 
-#include "../bdr_Extension.h"
+#include <bdr/bdr_Extension.h>
 
 namespace bdr
     {
@@ -16,6 +16,10 @@ namespace bdr
     class RayTracingExtension : public Extension
         {
         private:
+            // The extension can only be created by the Instance::Create method
+            friend static status_return<unique_ptr<Instance>> Instance::Create( const InstanceTemplate& parameters );
+            RayTracingExtension( const Instance* _instance ) : Extension(_instance) {};
+
             VkPhysicalDeviceAccelerationStructureFeaturesKHR AccelerationStructureFeaturesQuery{};
             VkPhysicalDeviceRayTracingPipelineFeaturesKHR RayTracingPipelineFeaturesQuery{};
             VkPhysicalDeviceHostQueryResetFeatures HostQueryResetFeaturesQuery{};
@@ -30,7 +34,7 @@ namespace bdr
             vector<RayTracingAccelerationStructure*> BLASes;
             RayTracingAccelerationStructure *TLAS{};
 
-            set<RayTracingPipeline*> RayTracingPipelines;
+            unordered_set<RayTracingPipeline*> RayTracingPipelines;
             void RemoveRayTracingPipeline( RayTracingPipeline* pipeline );
 
             RayTracingAccelerationStructure* CreateAccBuffer( VkAccelerationStructureCreateInfoKHR createInfo );
@@ -42,8 +46,6 @@ namespace bdr
             VkResult BeginInternalCommandBuffer( VkCommandBuffer cmdBuffer );
 
         public:
-            RayTracingExtension( const Instance* _instance ) : Extension(_instance) {};
-
             // build the BLAS from the list of entries
             // TODO: make this more dynamic so we can add and remove entries in the blas
             void BuildBLAS( const std::vector<RayTracingBLASEntry*> &BLASEntries );
@@ -67,10 +69,10 @@ namespace bdr
             //
 
             // called after instance is created, good place to set up dynamic methods and call stuff post create instance 
-            virtual Status PostCreateInstance();
+            virtual status PostCreateInstance();
 
             // called to add required device extensions
-            virtual Status AddRequiredDeviceExtensions( 
+            virtual status AddRequiredDeviceExtensions( 
                 VkPhysicalDeviceFeatures2* physicalDeviceFeatures,
                 VkPhysicalDeviceProperties2* physicalDeviceProperties,
                 std::vector<const char*>* extensionList 
@@ -86,13 +88,13 @@ namespace bdr
                 );
 
             // called before device is created
-            virtual Status CreateDevice( VkDeviceCreateInfo* deviceCreateInfo );
+            virtual status CreateDevice( VkDeviceCreateInfo* deviceCreateInfo );
 
             // called after device is created, good place to set up dynamic methods and call stuff post create device 
-            virtual Status PostCreateDevice();
+            virtual status PostCreateDevice();
 
             // called before any extension is deleted. makes it possible to remove data that is dependent on some other extension
-            virtual Status Cleanup();
+            virtual status Cleanup();
 
             //BDGetConstRefMacro( VkPhysicalDeviceAccelerationStructurePropertiesKHR, AccelerationStructureProperties );
             //BDGetConstRefMacro( VkPhysicalDeviceRayTracingPipelinePropertiesKHR, RayTracingPipelineProperties );

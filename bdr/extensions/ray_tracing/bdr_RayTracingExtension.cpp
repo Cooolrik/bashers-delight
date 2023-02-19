@@ -570,7 +570,7 @@ namespace bdr
 //	return pipeline;
 //	}
 //
-Status RayTracingExtension::PostCreateInstance()
+status RayTracingExtension::PostCreateInstance()
 	{
 	GetVulkanInstanceProcAddr( vkCreateAccelerationStructureKHR );
 	GetVulkanInstanceProcAddr( vkDestroyAccelerationStructureKHR );
@@ -599,98 +599,92 @@ Status RayTracingExtension::PostCreateInstance()
 
 	return status_code::ok;
 	}
-//
-//VkResult bdr::RayTracingExtension::AddRequiredDeviceExtensions( 
-//	VkPhysicalDeviceFeatures2* physicalDeviceFeatures,
-//	VkPhysicalDeviceProperties2* physicalDeviceProperties,
-//	std::vector<const char*>* extensionList
-//	)
-//	{
-//	// enable extensions needed for ray tracing
-//	Extension::AddExtensionToList( extensionList, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME );
-//	Extension::AddExtensionToList( extensionList, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME );
-//	Extension::AddExtensionToList( extensionList, VK_KHR_MAINTENANCE3_EXTENSION_NAME );
-//	Extension::AddExtensionToList( extensionList, VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME );
-//	Extension::AddExtensionToList( extensionList, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME );
-//	
-//	// set up query structs
-//
-//	// features
-//	VR_ADD_STRUCT_TO_VULKAN_LINKED_LIST( physicalDeviceFeatures, this->AccelerationStructureFeaturesQuery, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR );
-//	VR_ADD_STRUCT_TO_VULKAN_LINKED_LIST( physicalDeviceFeatures, this->RayTracingPipelineFeaturesQuery, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR );
-//	VR_ADD_STRUCT_TO_VULKAN_LINKED_LIST( physicalDeviceFeatures, this->HostQueryResetFeaturesQuery, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES );
-//	
-//	// properties
-//	VR_ADD_STRUCT_TO_VULKAN_LINKED_LIST( physicalDeviceProperties, this->AccelerationStructureProperties, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR );
-//	VR_ADD_STRUCT_TO_VULKAN_LINKED_LIST( physicalDeviceProperties, this->RayTracingPipelineProperties, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR );
-//
-//	return VkResult::VK_SUCCESS;
-//	}
-//
-//bool bdr::RayTracingExtension::SelectDevice(
-//	const VkSurfaceCapabilitiesKHR& surfaceCapabilities,
-//	const std::vector<VkSurfaceFormatKHR>& availableSurfaceFormats,
-//	const std::vector<VkPresentModeKHR>& availablePresentModes,
-//	const VkPhysicalDeviceFeatures2& physicalDeviceFeatures,
-//	const VkPhysicalDeviceProperties2& physicalDeviceProperties
-//	)
-//	{
-//	UNREFERENCED_PARAMETER( surfaceCapabilities );
-//	UNREFERENCED_PARAMETER( availableSurfaceFormats );
-//	UNREFERENCED_PARAMETER( availablePresentModes );
-//	UNREFERENCED_PARAMETER( physicalDeviceFeatures );
-//	UNREFERENCED_PARAMETER( physicalDeviceProperties );
-//
-//	// check for needed features
-//	if( !this->AccelerationStructureFeaturesQuery.accelerationStructure )
-//		return false;
-//	if( !this->RayTracingPipelineFeaturesQuery.rayTracingPipeline )
-//		return false;
-//	if( !this->HostQueryResetFeaturesQuery.hostQueryReset )
-//		return false;
-//
-//	return true;
-//	}
-//
-//VkResult bdr::RayTracingExtension::CreateDevice( VkDeviceCreateInfo* deviceCreateInfo )
-//	{
-//	VR_ADD_STRUCT_TO_VULKAN_LINKED_LIST( deviceCreateInfo, this->AccelerationStructureFeaturesCreate, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR );
-//	VR_ADD_STRUCT_TO_VULKAN_LINKED_LIST( deviceCreateInfo, this->RayTracingPipelineFeaturesCreate, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR );
-//	VR_ADD_STRUCT_TO_VULKAN_LINKED_LIST( deviceCreateInfo, this->HostQueryResetFeaturesCreate, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES );
-//
-//	// enable required features
-//	this->AccelerationStructureFeaturesCreate.accelerationStructure = VK_TRUE;
-//	this->RayTracingPipelineFeaturesCreate.rayTracingPipeline = VK_TRUE;
-//	this->HostQueryResetFeaturesCreate.hostQueryReset = VK_TRUE;
-//
-//	return VkResult::VK_SUCCESS;
-//	}
-//
-//VkResult bdr::RayTracingExtension::PostCreateDevice()
-//	{
-//	return VkResult::VK_SUCCESS;
-//	}
-//
-//VkResult bdr::RayTracingExtension::Cleanup()
-//	{
-//	// remove TLAS acceleration structure
-//	if( this->TLAS )
-//		{
-//		delete this->TLAS;
-//		this->TLAS = nullptr;
-//		}
-//
-//	// remove all BLAS acceleration structures
-//	for( size_t i = 0; i < this->BLASes.size(); ++i )
-//		{
-//		delete this->BLASes[i];
-//		}
-//	this->BLASes.clear();
-//
-//
-//	return VkResult::VK_SUCCESS;
-//	}
-//
+
+status bdr::RayTracingExtension::AddRequiredDeviceExtensions( 
+	VkPhysicalDeviceFeatures2* physicalDeviceFeatures,
+	VkPhysicalDeviceProperties2* physicalDeviceProperties,
+	std::vector<const char*>* extensionList
+	)
+	{
+	// enable extensions needed for ray tracing
+	Extension::AddExtensionToList( extensionList, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME );
+	Extension::AddExtensionToList( extensionList, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME );
+	Extension::AddExtensionToList( extensionList, VK_KHR_MAINTENANCE3_EXTENSION_NAME );
+	Extension::AddExtensionToList( extensionList, VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME );
+	Extension::AddExtensionToList( extensionList, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME );
+	
+	// set up query structs
+
+	// features
+	InitializeLinkedVulkanStructure( physicalDeviceFeatures, this->AccelerationStructureFeaturesQuery, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR );
+	InitializeLinkedVulkanStructure( physicalDeviceFeatures, this->RayTracingPipelineFeaturesQuery, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR );
+	InitializeLinkedVulkanStructure( physicalDeviceFeatures, this->HostQueryResetFeaturesQuery, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES );
+	
+	// properties
+	InitializeLinkedVulkanStructure( physicalDeviceProperties, this->AccelerationStructureProperties, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR );
+	InitializeLinkedVulkanStructure( physicalDeviceProperties, this->RayTracingPipelineProperties, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR );
+
+	return status_code::ok;
+	}
+
+bool bdr::RayTracingExtension::SelectDevice(
+	const VkSurfaceCapabilitiesKHR& /*surfaceCapabilities*/,
+	const std::vector<VkSurfaceFormatKHR>& /*availableSurfaceFormats*/,
+	const std::vector<VkPresentModeKHR>& /*availablePresentModes*/,
+	const VkPhysicalDeviceFeatures2& /*physicalDeviceFeatures*/,
+	const VkPhysicalDeviceProperties2& /*physicalDeviceProperties*/
+	)
+	{
+	// check for needed features
+	if( !this->AccelerationStructureFeaturesQuery.accelerationStructure )
+		return false;
+	if( !this->RayTracingPipelineFeaturesQuery.rayTracingPipeline )
+		return false;
+	if( !this->HostQueryResetFeaturesQuery.hostQueryReset )
+		return false;
+
+	return true;
+	}
+
+status bdr::RayTracingExtension::CreateDevice( VkDeviceCreateInfo* deviceCreateInfo )
+	{
+	InitializeLinkedVulkanStructure( deviceCreateInfo, this->AccelerationStructureFeaturesCreate, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR );
+	InitializeLinkedVulkanStructure( deviceCreateInfo, this->RayTracingPipelineFeaturesCreate, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR );
+	InitializeLinkedVulkanStructure( deviceCreateInfo, this->HostQueryResetFeaturesCreate, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES );
+
+	// enable required features
+	this->AccelerationStructureFeaturesCreate.accelerationStructure = VK_TRUE;
+	this->RayTracingPipelineFeaturesCreate.rayTracingPipeline = VK_TRUE;
+	this->HostQueryResetFeaturesCreate.hostQueryReset = VK_TRUE;
+
+	return status_code::ok;
+	}
+
+status bdr::RayTracingExtension::PostCreateDevice()
+	{
+	return status_code::ok;
+	}
+
+status bdr::RayTracingExtension::Cleanup()
+	{
+	//// remove TLAS acceleration structure
+	//if( this->TLAS )
+	//	{
+	//	delete this->TLAS;
+	//	this->TLAS = nullptr;
+	//	}
+	//
+	//// remove all BLAS acceleration structures
+	//for( size_t i = 0; i < this->BLASes.size(); ++i )
+	//	{
+	//	delete this->BLASes[i];
+	//	}
+	//this->BLASes.clear();
+	//
+
+	return status_code::ok;
+	}
+
 //
 //inline uint32_t alignUp( uint32_t value, uint32_t alignment )
 //	{

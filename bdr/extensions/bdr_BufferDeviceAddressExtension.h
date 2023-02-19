@@ -2,19 +2,21 @@
 // Licensed under the MIT license https://github.com/Cooolrik/bashers-delight/blob/main/LICENSE
 #pragma once
 
-#include "bdr_Extension.h"
+#include <bdr/bdr_Extension.h>
 
 namespace bdr
     {
     class BufferDeviceAddressExtension : public Extension
         {
         private:
+            // The extension can only be created by the Instance::Create method
+            friend static status_return<unique_ptr<Instance>> Instance::Create( const InstanceTemplate& parameters );
+            BufferDeviceAddressExtension( const Instance* _instance ) : Extension(_instance) {};
+
             VkPhysicalDeviceBufferDeviceAddressFeaturesKHR BufferDeviceAddressFeaturesQuery{};
             VkPhysicalDeviceBufferDeviceAddressFeaturesKHR BufferDeviceAddressFeaturesCreate{};
 
         public:
-            BufferDeviceAddressExtension( const Instance* _instance ) : Extension(_instance) {};
-
             // ####################################
             //
             // Extension code
@@ -22,7 +24,7 @@ namespace bdr
 
 
             // called to add required device extensions
-            virtual Status AddRequiredDeviceExtensions( 
+            virtual status AddRequiredDeviceExtensions( 
                 VkPhysicalDeviceFeatures2* physicalDeviceFeatures,
                 VkPhysicalDeviceProperties2* physicalDeviceProperties,
                 std::vector<const char*>* extensionList 
@@ -38,7 +40,7 @@ namespace bdr
                 );
 
             // called before device is created
-            virtual Status CreateDevice( VkDeviceCreateInfo* deviceCreateInfo );
+            virtual status CreateDevice( VkDeviceCreateInfo* deviceCreateInfo );
 
         };
     };

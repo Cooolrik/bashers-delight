@@ -9,7 +9,7 @@
 namespace bdr
 {
 
-Status bdr::DescriptorIndexingExtension::AddRequiredDeviceExtensions( 
+status bdr::DescriptorIndexingExtension::AddRequiredDeviceExtensions( 
 	VkPhysicalDeviceFeatures2* physicalDeviceFeatures,
 	VkPhysicalDeviceProperties2* /*physicalDeviceProperties*/,
 	std::vector<const char*>* extensionList
@@ -45,7 +45,7 @@ bool bdr::DescriptorIndexingExtension::SelectDevice(
 	return true;
 	}
 
-Status bdr::DescriptorIndexingExtension::CreateDevice( VkDeviceCreateInfo* deviceCreateInfo )
+status bdr::DescriptorIndexingExtension::CreateDevice( VkDeviceCreateInfo* deviceCreateInfo )
 	{
 	InitializeLinkedVulkanStructure( deviceCreateInfo, this->DescriptorIndexingFeaturesCreate, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES );
 
