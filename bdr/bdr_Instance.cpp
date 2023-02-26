@@ -224,12 +224,16 @@ namespace bdr
 			}
 
 		// enable additional extensions
-		pThis->BufferDeviceAddressExtension_ = unique_ptr<bdr::BufferDeviceAddressExtension>( new bdr::BufferDeviceAddressExtension(pThis.get()) );
-		pThis->EnabledExtensions.push_back( pThis->BufferDeviceAddressExtension_.get() );
-		
-		pThis->DescriptorIndexingExtension_ = unique_ptr<bdr::DescriptorIndexingExtension>( new bdr::DescriptorIndexingExtension(pThis.get()) );
-		pThis->EnabledExtensions.push_back( pThis->DescriptorIndexingExtension_.get() );
-
+		if( parameters.EnableDescriptorIndexingExtension )
+			{
+			pThis->BufferDeviceAddressExtension_ = unique_ptr<bdr::BufferDeviceAddressExtension>( new bdr::BufferDeviceAddressExtension(pThis.get()) );
+			pThis->EnabledExtensions.push_back( pThis->BufferDeviceAddressExtension_.get() );
+			}
+		if( parameters.EnableDescriptorIndexingExtension )
+			{
+			pThis->DescriptorIndexingExtension_ = unique_ptr<bdr::DescriptorIndexingExtension>( new bdr::DescriptorIndexingExtension(pThis.get()) );
+			pThis->EnabledExtensions.push_back( pThis->DescriptorIndexingExtension_.get() );
+			}
 		if( parameters.EnableRayTracingExtension )
 			{
 			pThis->RayTracingExtension_ = unique_ptr<bdr::RayTracingExtension>( new bdr::RayTracingExtension(pThis.get()) );

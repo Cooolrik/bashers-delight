@@ -210,10 +210,12 @@ namespace bdr
 			// enable validation (for debugging purposes)
 			bool EnableValidation = false;
 				
-			// true to enable ray tracing extension. 
+			// flags for built-in extensions
+			bool EnableBufferDeviceAddressExtension = false;
+			bool EnableDescriptorIndexingExtension = false;
 			bool EnableRayTracingExtension = false;
 
-			// list of needed extensions for eg windowing system
+			// list of needed vulkan extensions for eg windowing system
 			uint NeededExtensionsCount = 0;
 			const char** NeededExtensions = {};
 

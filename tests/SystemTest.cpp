@@ -99,7 +99,7 @@ void run()
 
 	CheckRetValCall( commandPool , device->CreateCommandPool( bdr::CommandPoolTemplate() ) );
 
-	std::cout << commandPool;
+	std::cout << commandPool << std::endl;
 
 	status = Release( instance );
 
