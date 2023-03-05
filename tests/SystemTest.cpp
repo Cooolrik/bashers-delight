@@ -14,6 +14,7 @@
 #include <bdr/bdr_Instance.h>
 #include <bdr/bdr_Device.h>
 #include <bdr/bdr_CommandPool.h>
+#include <bdr/bdr_AllocationsBlock.h>
 //#include <bdr/bdr_Swapchain.h>
 
 #define GLFW_INCLUDE_VULKAN
@@ -97,7 +98,9 @@ void run()
 	DeviceTemplate dparams = { surface };
 	CheckRetValCall( device , instance->CreateDevice( dparams ) );
 
-	CheckRetValCall( commandPool , device->CreateCommandPool( bdr::CommandPoolTemplate() ) );
+	CheckRetValCall( allocationsBlock , device->CreateAllocationsBlock() );
+
+	CheckRetValCall( commandPool , allocationsBlock->CreateCommandPool( bdr::CommandPoolTemplate() ) );
 
 	std::cout << commandPool << std::endl;
 

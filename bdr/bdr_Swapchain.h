@@ -4,7 +4,7 @@
 #pragma once
 
 #include "bdr.h"
-#include "bdr_Device.h"
+#include "bdr_AllocationsBlock.h"
 
 namespace bdr 
 	{
@@ -14,8 +14,9 @@ namespace bdr
 			~Swapchain();
 
 		private:
-            friend status Device::CreateSwapchain( const SwapchainTemplate& parameters );
+			friend status_return<Swapchain*> SubmoduleMap<Instance,Swapchain>::CreateSubmodule( const SwapchainTemplate& parameters );
 			Swapchain( const Instance* _module );
+			status Setup( const bdr::SwapchainTemplate& parameters );
 
 			VkSwapchainKHR SwapchainHandle = VK_NULL_HANDLE;
 
@@ -26,6 +27,8 @@ namespace bdr
 
 			VkFormat SurfaceDepthFormat{};
 			bool DepthFormatHasStencil = false;
+
+			unique_ptr<SwapchainTemplate> Template;
 
 			//VkRenderPass RenderPassHandle = nullptr;
 			//vector<VkFramebuffer> FramebuffersHandles;

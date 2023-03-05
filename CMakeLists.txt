@@ -74,10 +74,14 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		./bdr/bdr.h
 		./bdr/bdr.inl
 		
+		./bdr/bdr_AllocationsBlock.cpp
+		./bdr/bdr_AllocationsBlock.h
 		#./bdr/bdr_Buffer.cpp
 		#./bdr/bdr_Buffer.h
 		./bdr/bdr_CommandPool.cpp
 		./bdr/bdr_CommandPool.h
+		./bdr/bdr_FramebufferPool.cpp
+		./bdr/bdr_FramebufferPool.h
 		#./bdr/bdr_Common.inl
 		#./bdr/bdr_ComputePipeline.cpp
 		#./bdr/bdr_ComputePipeline.h

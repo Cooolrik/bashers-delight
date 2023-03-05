@@ -88,6 +88,8 @@ namespace bdr
     class Pipeline;
     class VertexBuffer;
     class IndexBuffer;
+	class AllocationsBlock;
+	class AllocationsBlockTemplate;
 
 	// define submodule class template, which all submodules derive from
 	template <class _ModuleTy> class SubmoduleTemplate
@@ -108,6 +110,77 @@ namespace bdr
 	using DescriptorIndexingSubmodule = SubmoduleTemplate<DescriptorIndexingExtension>;
 	using BufferDeviceAddressSubmodule = SubmoduleTemplate<BufferDeviceAddressExtension>;
 	using RayTracingSubmodule = SubmoduleTemplate<RayTracingExtension>;
+
+	// a map of Submodules, used to keep allocations grouped
+	template <class _ModuleTy , class _SubmoduleTy> class SubmoduleMap : public SubmoduleTemplate<_ModuleTy>
+		{
+		private:
+			unordered_map<_SubmoduleTy*,unique_ptr<_SubmoduleTy>> moduleMap;
+
+		public:
+			SubmoduleMap( const _ModuleTy *_module ) : SubmoduleTemplate(_module) {}
+			~SubmoduleMap() {}
+
+			// Create an object of the Submodule type. Calls the setup method of the object and checks for errors before inserting into map.
+			// On success, return a copy of the pointer to the user. Note that the submodule object is owned by the map, and
+			// should not be deleted manually.
+			template<class _SubmoduleTemplateTy> status_return<_SubmoduleTy*> CreateSubmodule( const _SubmoduleTemplateTy& parameters )
+				{
+				auto submodule = unique_ptr<_SubmoduleTy>( new _SubmoduleTy( this->GetModule() ) );
+				status result = submodule->Setup( parameters );
+				if( !result )
+					return result;
+				auto pSubmodule = submodule.get();
+				this->moduleMap.insert( { pSubmodule , std::move( submodule ) } );
+				return pSubmodule;
+				}
+
+			// Destroys the specific Submodule object, and removes it from the map.
+			// Note that this is not a necessary step for clean up purposes, the map deletes
+			// the objects automatically.
+			status DestroySubmodule( _SubmoduleTy *pSubmodule )
+				{
+				auto it = this->moduleMap.find( pSubmodule );
+				if( it == this->moduleMap.end() )
+					return status_code::invalid_param; 
+
+				// explicitly clean up object
+				status result = it->second->Cleanup();
+				if( !result )
+					return result;
+
+				// remove from map
+				this->moduleMap.erase( it );
+				return status_code::ok;
+				}
+
+			// Clears all objects owned by the Submodule map explicitly by calling the
+			// Cleanup method. Note that the cleanup will stop if one of the objects
+			// return an error.
+			status Cleanup()
+				{
+				// explicitly Clean all objects and check status return 
+				auto it = this->moduleMap.begin();
+				while( it != this->moduleMap.end() )
+					{
+					// explicitly clean up object
+					status result = it->second->Cleanup();
+					if( !result )
+						return result;
+
+					// remove from map
+					it = this->moduleMap.erase( it );
+					}
+
+				return status_code::ok;
+				}
+		};
+
+	// alias SubmoduleMaps for the main renderer and extensions
+	template<class _SubmoduleTy> using MainSubmoduleMap = SubmoduleMap<Instance,_SubmoduleTy>;
+	template<class _SubmoduleTy> using DescriptorIndexingSubmoduleMap = SubmoduleMap<DescriptorIndexingExtension,_SubmoduleTy>;
+	template<class _SubmoduleTy> using BufferDeviceAddressSubmoduleMap = SubmoduleMap<BufferDeviceAddressExtension,_SubmoduleTy>;
+	template<class _SubmoduleTy> using RayTracingSubmoduleMap = SubmoduleMap<RayTracingExtension,_SubmoduleTy>;
 
 	// template method which explicitly cleans up a unique_ptr of a bdr object which is handed to it
 	template<typename _Ty>

@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "bdr_Device.h"
+#include "bdr.h"
 
 namespace bdr
 	{
@@ -13,11 +13,9 @@ namespace bdr
 			~CommandPool();
 
 		private:
-			friend status_return<CommandPool*> Device::CreateCommandPool( const CommandPoolTemplate& parameters );
-			CommandPool( const Instance* _module , VkCommandPool commandPoolHandle , const std::vector<VkCommandBuffer> &bufferObjects );
-
-			void SetupCommandBuffers( const std::vector<VkCommandBuffer> &bufferObjects );
-			void DeleteCommandBuffers();
+			friend status_return<CommandPool*> MainSubmoduleMap<CommandPool>::CreateSubmodule( const CommandPoolTemplate& parameters );
+			CommandPool( const Instance* _module );
+			status Setup( const CommandPoolTemplate& parameters );
 
 			VkCommandPool CommandPoolHandle = VK_NULL_HANDLE; 
 
@@ -32,6 +30,9 @@ namespace bdr
 
 			status_return<CommandBuffer*> BeginCommandBuffer();
 			status EndCommandBuffer( CommandBuffer *commandBuffer );
+
+			// explicitly cleans up the object, and also destroys all data and objects owned by it
+			status Cleanup();
 
 			// returns true if at least one buffer is currently recording
 			bool IsRecording() const { return !ActiveBuffers.empty(); }

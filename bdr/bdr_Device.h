@@ -37,12 +37,7 @@ namespace bdr
 
 			VmaAllocator MemoryAllocatorHandle = VK_NULL_HANDLE;
 
-			// the swapchain and the template used to create the swapchain
-			unique_ptr<Swapchain> Swapchain_;
-			unique_ptr<SwapchainTemplate> SwapchainTemplate_;
-
-			// the allocated CommandPool objects
-			unordered_map<CommandPool*,unique_ptr<CommandPool>> CommandPools;
+			MainSubmoduleMap<AllocationsBlock> AllocationsBlocks;
 
 			//
 			//struct TargetImage
@@ -88,51 +83,48 @@ namespace bdr
 			///// create base vulkan buffer
 			//template<class B,class BT> B* NewBuffer( const BT& bt ) const;
 
-			VkCommandBuffer BeginInternalCommandBuffer() const;
-			void EndAndSubmitInternalCommandBuffer( VkCommandBuffer buffer ) const;
-
-		public:
-			// creates a swapchain with framebuffer objects
-			status CreateSwapchain( const SwapchainTemplate& parameters );
-
-			// recreates a lost swapchain 
-			status RecreateSwapchain( const SwapchainTemplate& parameters );
-
-			// explicitly cleanups the object, and also clears all objects owned by it
-			status Cleanup();
-
-			// create a command pool object
-			status_return<CommandPool*> CreateCommandPool( const CommandPoolTemplate& parameters );
-
-			// destroy a command pool object
-			status DestroyCommandPool( CommandPool *commandPool );
+			//VkCommandBuffer BeginInternalCommandBuffer() const;
+			//void EndAndSubmitInternalCommandBuffer( VkCommandBuffer buffer ) const;
 
 			// requests updated surface caps, formats and present modes from the selected physical device
 			status UpdateSurfaceCapabilitiesFormatsAndPresentModes();
 
+		public:
+
+			// creates an allocations block. allocations blocks are used to allocate all other 
+			// object types, and there can be any number of allocations blocks in the application.
+			// creation and destruction of allocations blocks should only be done by a single thread
+			// and the block can be handed off to another thread after creation
+			status_return<AllocationsBlock*> CreateAllocationsBlock();
+
+			// deletes an allocation block.
+			// creation and destruction of allocations blocks should only be done by a single thread
+			status DestroyAllocationsBlock( AllocationsBlock *block );
+
+			// explicitly cleans up the object, and also destroys all objects owned by it
+			status Cleanup();
 
 			// public get methods
 			VkDevice GetDeviceHandle() const { return this->DeviceHandle; }
+			VkPhysicalDevice GetPhysicalDeviceHandle() const { return this->PhysicalDeviceHandle; }
+			VkQueue GetGraphicsQueueHandle() const { return this->GraphicsQueueHandle; }
+			VkQueue GetPresentQueueHandle() const { return this->PresentQueueHandle; }
+			uint GetPhysicalDeviceQueueGraphicsFamily() const { return this->PhysicalDeviceQueueGraphicsFamily; }
+			uint GetPhysicalDeviceQueuePresentFamily() const { return this->PhysicalDeviceQueuePresentFamily; }
+			VkPhysicalDeviceFeatures2 GetPhysicalDeviceFeatures() const { return this->PhysicalDeviceFeatures; }
+			VkPhysicalDeviceProperties2 GetPhysicalDeviceProperties() const { return this->PhysicalDeviceProperties; }
 
-			//BDRGetMacro( VkPhysicalDevice, PhysicalDevice );
-			//BDRGetMacro( VkDevice, Device );
-			//BDRGetMacro( VkQueue, GraphicsQueue );
-			//BDRGetMacro( VkQueue, PresentQueue );
-			//BDRGetMacro( std::vector<VkSurfaceFormatKHR>, AvailableSurfaceFormats );
-			//BDRGetMacro( std::vector<VkPresentModeKHR>, AvailablePresentModes );
-			//BDRGetMacro( VkPhysicalDeviceFeatures2, PhysicalDeviceFeatures );
-			//BDRGetMacro( VkSurfaceCapabilitiesKHR, SurfaceCapabilities );
-			//BDRGetMacro( VkSurfaceFormatKHR, SurfaceFormat );
-			//BDRGetMacro( VkPresentModeKHR, PresentMode );
-			//BDRGetMacro( VkExtent2D, RenderExtent );
-			//BDRGetMacro( std::vector<VkFramebuffer>, Framebuffers );
-			//BDRGetMacro( std::vector<VkImage>, SwapChainImages );
-			//BDRGetMacro( VkRenderPass, RenderPass );
-			//BDRGetMacro( VmaAllocator, MemoryAllocator );
+			// returns a copy of the device extension list
+			vector<const char*> GetDeviceExtensionList() const { return this->DeviceExtensionList; }
 
-			//const Image* GetColorTargetImage( uint index ) const { return this->TargetImages[index].Color.get(); }
-			//const Image* GetDepthTargetImage( uint index ) const { return this->TargetImages[index].Depth.get(); }
+			// returns copies of the surface information
+			VkSurfaceKHR GetSurfaceHandle() const { return this->SurfaceHandle; }
+			vector<VkSurfaceFormatKHR> GetAvailableSurfaceFormats() const { return this->AvailableSurfaceFormats; }
+			vector<VkPresentModeKHR> GetAvailablePresentModes() const { return this->AvailablePresentModes; }
+			VkSurfaceCapabilitiesKHR GetSurfaceCapabilities() const { this->SurfaceCapabilities; }
 
+			// get the memory allocator handle
+			VmaAllocator GetMemoryAllocatorHandle() const { return this->MemoryAllocatorHandle; }
 		};
 
 	// Device template creation parameters

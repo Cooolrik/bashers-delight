@@ -98,6 +98,13 @@ template <class _ListTy , class _Ty> inline void InitializeLinkedVulkanStructure
 	_plist->pNext = &_strct;
 	}
 
+// convenience macro destroy a pointer to memory block
+#define SafeDestroy( ptr )\
+	if( ptr != nullptr ) {\
+		delete [] ptr;\
+		ptr = nullptr;\
+		}
+
 // convenience macro to destroy a specific object only if it is allocated, and also reset the handle object
 #define SafeVkDestroy( handle , destroy_call )\
 	if( handle != VK_NULL_HANDLE ) {\

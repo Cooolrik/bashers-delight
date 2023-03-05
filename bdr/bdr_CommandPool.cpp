@@ -2,6 +2,8 @@
 // Licensed under the MIT license https://github.com/Cooolrik/bashers-delight/blob/main/LICENSE
 #include <bdr/bdr.inl>
 
+#include "bdr_Instance.h"
+#include "bdr_Device.h"
 #include "bdr_CommandPool.h"
 
 //#include "bdr_GraphicsPipeline.h"
@@ -19,26 +21,32 @@
 
 namespace bdr
 {
-	CommandPool::CommandPool( const Instance* _module, VkCommandPool commandPoolHandle, const std::vector<VkCommandBuffer> &bufferObjects ) : MainSubmodule(_module) , CommandPoolHandle( commandPoolHandle ) , BuffersCount( bufferObjects.size() )
+	CommandPool::CommandPool( const Instance* _module ) : MainSubmodule(_module) 
 		{
 		LogThis;
-
-		this->SetupCommandBuffers( bufferObjects );
 		}
-
-	CommandPool::~CommandPool()
+	
+	status CommandPool::Setup( const CommandPoolTemplate& parameters )
 		{
-		LogThis;
+		Validate( parameters.BufferCount > 0 , status_code::invalid_param ) << "The parameters.BufferCount cannot be 0" << ValidateEnd;
+		
+		auto device = this->Module->GetDevice();
 
-		// the allocated buffers will be automatically deallocated
-		vkDestroyCommandPool( this->Module->GetDevice()->GetDeviceHandle(), this->CommandPoolHandle, nullptr );
-
-		this->DeleteCommandBuffers();
-		}
-
-	void CommandPool::SetupCommandBuffers( const std::vector<VkCommandBuffer> &bufferObjects )
-		{
-		SanityCheck( bufferObjects.size() == this->BuffersCount );
+		// create the command pool vulkan object
+		VkCommandPoolCreateInfo poolInfo = {};
+		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		poolInfo.queueFamilyIndex = device->GetPhysicalDeviceQueueGraphicsFamily();
+		poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+		CheckCall( vkCreateCommandPool( device->GetDeviceHandle(), &poolInfo, nullptr, &this->CommandPoolHandle ) );
+		
+		// allocate buffer objects
+		std::vector<VkCommandBuffer> bufferObjects(parameters.BufferCount);
+		VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
+		commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		commandBufferAllocateInfo.commandPool = this->CommandPoolHandle;
+		commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		commandBufferAllocateInfo.commandBufferCount = (uint32_t)parameters.BufferCount;
+		CheckCall( vkAllocateCommandBuffers( device->GetDeviceHandle(), &commandBufferAllocateInfo, bufferObjects.data() ) );
 
 		// fill in the buffer objects
 		this->Buffers = new CommandBuffer[this->BuffersCount];
@@ -48,15 +56,24 @@ namespace bdr
 			this->Buffers[inx].BufferIndex = inx;
 			this->Buffers[inx].CommandBufferHandle = bufferObjects[inx];
 			}
+
+		return status::ok;
 		}
 
-	void CommandPool::DeleteCommandBuffers()
+	CommandPool::~CommandPool()
 		{
-		SanityCheck( this->Buffers );
+		LogThis;
 
-		delete [] this->Buffers;
+		this->Cleanup();
 		}
 
+	status CommandPool::Cleanup()
+		{
+		SafeVkDestroy( this->CommandPoolHandle , vkDestroyCommandPool( this->Module->GetDevice()->GetDeviceHandle(), this->CommandPoolHandle, nullptr ) )
+		SafeDestroy( this->Buffers );
+
+		return status::ok;
+		}
 
 	status CommandPool::ResetCommandPool()
 		{
