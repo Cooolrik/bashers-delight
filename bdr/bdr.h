@@ -118,7 +118,7 @@ namespace bdr
 			unordered_map<_SubmoduleTy*,unique_ptr<_SubmoduleTy>> moduleMap;
 
 		public:
-			SubmoduleMap( const _ModuleTy *_module ) : SubmoduleTemplate(_module) {}
+			SubmoduleMap( const _ModuleTy *_module ) : SubmoduleTemplate<_ModuleTy>(_module) {}
 			~SubmoduleMap() {}
 
 			// Create an object of the Submodule type. Calls the setup method of the object and checks for errors before inserting into map.

@@ -121,7 +121,7 @@ namespace bdr
 			VkSurfaceKHR GetSurfaceHandle() const { return this->SurfaceHandle; }
 			vector<VkSurfaceFormatKHR> GetAvailableSurfaceFormats() const { return this->AvailableSurfaceFormats; }
 			vector<VkPresentModeKHR> GetAvailablePresentModes() const { return this->AvailablePresentModes; }
-			VkSurfaceCapabilitiesKHR GetSurfaceCapabilities() const { this->SurfaceCapabilities; }
+			VkSurfaceCapabilitiesKHR GetSurfaceCapabilities() const { return this->SurfaceCapabilities; }
 
 			// get the memory allocator handle
 			VmaAllocator GetMemoryAllocatorHandle() const { return this->MemoryAllocatorHandle; }

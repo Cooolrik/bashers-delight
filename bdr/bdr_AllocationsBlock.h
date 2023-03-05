@@ -13,13 +13,13 @@ namespace bdr
 			~AllocationsBlock();
 
 		private:
-			friend status_return<AllocationsBlock*> MainSubmoduleMap<AllocationsBlock>::CreateSubmodule( const AllocationsBlockTemplate& parameters );
+			friend status_return<AllocationsBlock*> MainSubmoduleMap<AllocationsBlock>::CreateSubmodule<AllocationsBlockTemplate>( const AllocationsBlockTemplate& parameters );
 			AllocationsBlock( const Instance* _module );
 			status Setup( const AllocationsBlockTemplate &parameters );
 
 			// allocation maps for the object types held by this allocations block
-			MainSubmoduleMap<Swapchain> Swapchains;
 			MainSubmoduleMap<CommandPool> CommandPools;
+			MainSubmoduleMap<Swapchain> Swapchains;
 
 		public:
 			// explicitly cleanups the object. deletes all owned objects.

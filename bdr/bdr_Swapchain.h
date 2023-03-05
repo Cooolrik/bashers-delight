@@ -14,7 +14,7 @@ namespace bdr
 			~Swapchain();
 
 		private:
-			friend status_return<Swapchain*> SubmoduleMap<Instance,Swapchain>::CreateSubmodule( const SwapchainTemplate& parameters );
+			friend status_return<Swapchain*> SubmoduleMap<Instance,Swapchain>::CreateSubmodule<SwapchainTemplate>( const SwapchainTemplate& parameters );
 			Swapchain( const Instance* _module );
 			status Setup( const bdr::SwapchainTemplate& parameters );
 

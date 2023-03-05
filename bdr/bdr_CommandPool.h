@@ -13,7 +13,7 @@ namespace bdr
 			~CommandPool();
 
 		private:
-			friend status_return<CommandPool*> MainSubmoduleMap<CommandPool>::CreateSubmodule( const CommandPoolTemplate& parameters );
+			friend status_return<CommandPool*> MainSubmoduleMap<CommandPool>::CreateSubmodule<CommandPoolTemplate>( const CommandPoolTemplate& parameters );
 			CommandPool( const Instance* _module );
 			status Setup( const CommandPoolTemplate& parameters );
 
