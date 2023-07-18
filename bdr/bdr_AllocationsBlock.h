@@ -3,23 +3,23 @@
 
 #pragma once
 
-#include "bdr.h"
+#include "bdr_Device.h"
 
 namespace bdr 
 	{
-	class AllocationsBlock : public MainSubmodule
+	class AllocationsBlock : public DeviceSubmodule
 		{
 		public:
 			~AllocationsBlock();
 
 		private:
-			friend status_return<AllocationsBlock*> MainSubmoduleMap<AllocationsBlock>::CreateSubmodule<AllocationsBlockTemplate>( const AllocationsBlockTemplate& parameters );
-			AllocationsBlock( const Instance* _module );
+			friend status_return<unique_ptr<AllocationsBlock>> Device::CreateObject<AllocationsBlock,AllocationsBlockTemplate>( const AllocationsBlockTemplate &parameters );
+			AllocationsBlock( Device* _module );
 			status Setup( const AllocationsBlockTemplate &parameters );
 
 			// allocation maps for the object types held by this allocations block
-			MainSubmoduleMap<CommandPool> CommandPools;
-			MainSubmoduleMap<Swapchain> Swapchains;
+			DeviceAllocationMap<CommandPool> CommandPools;
+			DeviceAllocationMap<Swapchain> Swapchains;
 
 		public:
 			// explicitly cleanups the object. deletes all owned objects.

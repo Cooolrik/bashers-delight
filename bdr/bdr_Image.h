@@ -1,105 +1,170 @@
 #pragma once
 
-#include "bdr_Instance.h"
+#include "bdr_Device.h"
 
 namespace bdr
-    {
-    class Buffer;
+{
+class Buffer;
 
-    class Image : public MainSubmodule
-        {
-        //BDSubmoduleMacro( Image, RendererSubmodule, Renderer );
+class Image : public DeviceSubmodule
+	{
+	public:
+		~Image();
 
-        private:
+	private:
+		friend status_return<unique_ptr<Image>> Device::CreateObject<Image, ImageTemplate>( const ImageTemplate &parameters );
+		Image( Device *_module );
+		status Setup( const ImageTemplate &parameters );
 
-            VkImage ImageHandle = nullptr;
-            VkImageView ImageView = nullptr;
-            VmaAllocation Allocation = nullptr;
+	private:
+		VkImage ImageHandle = nullptr;
+		VkImageView ImageView = nullptr;
+		VmaAllocation ImageAllocation = nullptr;
 
-        public:
+	public:
+		// explicitly clear the image data, and release the vulkan handles. 
+		// (note that images cannot be re-created after cleanup. Instead, delete and create a new object)
+		status Cleanup();
 
-            // transition the image layout using a memory barrier. Note that this method is synchronized and much slower than using a 
-            // memory barrier in a command buffer, and should only be used during setup stages.
-            void TransitionLayout( 
-                VkImageMemoryBarrier &imageMemoryBarrier,
-                VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_NONE_KHR , 
-                VkPipelineStageFlags destStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT 
-                );
-            void TransitionLayout(
-                VkImageLayout oldLayout,
-                VkImageLayout newLayout,
-                VkAccessFlags srcAccessMask,
-                VkAccessFlags dstAccessMask,
-                VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_NONE_KHR,
-                VkPipelineStageFlags destStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT
-                );
+		// Image to memory copy 
+		// The copy is done synchronously in the calling thread, and the call retuns after the copy is complete. 
+		// subresourceRange defines what part of the image should be locked
+		// If subresourceRange is omitted, it is assumed to be all aspects, all mips and all levels (performance warning!)
+		// srcImageLayout and srcImageAccessMask are the current layout and access masks of the image, and it will be restored to these after copy.
+		// srcPipelineStage is the pipeline stage to wait for before copying the source image. This can be set to VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT to not wait for any stage.
+		static status CopyImageToMemory(
+			const Image *srcImage,
+			VkImageLayout srcImageLayout,
+			VkAccessFlags srcImageAccessMask,
+			VkPipelineStageFlags srcPipelineStage,
+			void *destMemory,
+			size_t destMemorySize,
+			CommandPool *commandPool,
+			const std::vector<VkBufferImageCopy> &copyRegions,
+			VkImageSubresourceRange subresourceRange = {}
+		);
 
-            // copy the image to a buffer. The image will be put into transfer mode unless it is already in it,
-            // which is specified in oldLayout/srcAccessMask
-            void CopyToBuffer( 
-                Buffer *destBuffer,
-                uint32_t width, 
-                uint32_t height, 
-                uint32_t depth = 1,
-                VkImageLayout oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                VkImageLayout newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                VkAccessFlags srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-                VkAccessFlags dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-                VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                VkPipelineStageFlags destStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT
-                );
-            void CopyToBuffer(
-                Buffer* destBuffer,
-                const VkBufferImageCopy* region = nullptr,
-                VkImageLayout oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                VkImageLayout newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                VkAccessFlags srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-                VkAccessFlags dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-                VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                VkPipelineStageFlags destStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT
-            );
+		// Memory to image copy 
+		// The copy is done synchronously in the calling thread, and the call retuns after the copy is complete. 
+		// subresourceRange defined what part of the image should be locked
+		// If subresourceRange is omitted, it is assumed to be all aspects, all mips and all levels (performance warning!)
+		// destImageLayout and destImageAccessMask are the layout and access masks to set on the image after copy
+		// destPipelineStage is the pipeline which will be dependent on the image upload. This can be set to VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT to not mark any dependent stage.
+		static status CopyMemoryToImage(
+			const void *srcMemory,
+			size_t srcMemorySize,
+			const Image *destImage,
+			const VkImageMemoryBarrier &imageMemoryBarrier,
+			VkPipelineStageFlags destPipelineStage,
+			CommandPool *commandPool,
+			const std::vector<VkBufferImageCopy> &copyRegions
+		);
 
+		// transition the image layout using a memory barrier. Note that this method is synchronized and the method
+		// waits for the command buffer to complete before continuing. 
+		status TransitionImageLayout(
+			CommandPool *commandPool,
+			const VkImageMemoryBarrier &imageMemoryBarrier,
+			VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VkPipelineStageFlags destStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT
+		);
 
-            //BDGetCustomNameMacro( VkImage, Image, ImageHandle );
-            //BDGetMacro( VkImageView, ImageView );
-            //BDGetMacro( VmaAllocation, Allocation );
-        };
+		//void TransitionLayout(
+		//	VkImageLayout oldLayout,
+		//	VkImageLayout newLayout,
+		//	VkAccessFlags srcAccessMask,
+		//	VkAccessFlags dstAccessMask,
+		//	VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_NONE_KHR,
+		//	VkPipelineStageFlags destStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+		//	VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT
+		//	);
 
-    // template used to create an image
-    class ImageTemplate
-        {
-        public:
-            // initial create information
-            VkImageCreateInfo ImageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+		//// copy the image to a buffer. The image will be put into transfer mode unless it is already in it,
+		//// which is specified in oldLayout/srcAccessMask
+		//void CopyToBuffer( 
+		//	Buffer *destBuffer,
+		//	uint32_t width, 
+		//	uint32_t height, 
+		//	uint32_t depth = 1,
+		//	VkImageLayout oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		//	VkImageLayout newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		//	VkAccessFlags srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+		//	VkAccessFlags dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+		//	VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+		//	VkPipelineStageFlags destStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+		//	VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT
+		//	);
+		//void CopyToBuffer(
+		//	Buffer* destBuffer,
+		//	const VkBufferImageCopy* region = nullptr,
+		//	VkImageLayout oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		//	VkImageLayout newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		//	VkAccessFlags srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+		//	VkAccessFlags dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+		//	VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+		//	VkPipelineStageFlags destStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+		//	VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT
+		//	);
 
-            // vma allocation object
-            VmaAllocationCreateInfo AllocationCreateInfo = {};
+		// retrieve Vulkan handles
+		VkImage GetImageHandle() const
+			{
+			return this->ImageHandle;
+			}
+		VmaAllocation GetImageAllocation() const
+			{
+			return this->ImageAllocation;
+			}
+		VkImageView GetImageView() const
+			{
+			return this->ImageView;
+			}
+	};
 
-            // if an upload is to be made, here is the layout transition before the upload and the source pointer to copy from
-            const void* UploadSourcePtr = nullptr;
-            VkDeviceSize UploadSourceSize = 0;
-            VkImageMemoryBarrier UploadLayoutTransition = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-            std::vector<VkBufferImageCopy> UploadBufferImageCopies; // one per mip-map transfer
-           
-            // if TransitionImageLayout is set, apply a layout transition after creation (and optional upload)
-            // the FinalLayoutStageMask is the stage where the image is to be used and has to match the layout 
-            bool TransitionImageLayout = true;
-            VkPipelineStageFlags FinalLayoutStageMask = VK_PIPELINE_STAGE_NONE_KHR;
-            VkImageMemoryBarrier FinalLayoutTransition = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+// template used to create an image
+class ImageTemplate
+	{
+	public:
+		// image and imageview create infos
+		VkImageCreateInfo imageCreateInfo = {};
+		VkImageViewCreateInfo imageViewCreateInfo = {};
 
-            // image view create info
-            VkImageViewCreateInfo ImageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+		// vma allocation object
+		VmaAllocationCreateInfo allocationCreateInfo = {};
 
-            /////////////////////////////////
+		// if an upload is to be made, here is the layout transition before the upload and the source pointer to copy from
+		class Upload
+			{
+			public:
+				const void *srcMemory = nullptr;
+				size_t srcMemorySize = 0;
+				std::vector<VkBufferImageCopy> copyRegions;
+			};
+		optional_value<Upload> upload;
 
-            // create an 2d color image which is optimized for texture sampling. If source ptr is set, uploads image. If mipmap_offsets is set it is assumed to be at least mipmap_levels long, sets up transfers of mipmaps from source as well.
-            static ImageTemplate Texture2D( VkFormat format , uint32_t width , uint32_t height , uint32_t mipmap_levels , const void* source_ptr = nullptr , VkDeviceSize source_size = 0 , const VkDeviceSize* source_mipmap_offsets = nullptr );
+		// optional image transition, applied to finalize the image
+		// Note: that if upload is set, layoutTransition *must* also be set, as it will be applied after the upload
+		class LayoutTransition
+			{
+			public:
+				VkImageMemoryBarrier imageMemoryBarrier = {};
+				VkPipelineStageFlags destPipelineStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+			};
+		optional_value<LayoutTransition> layoutTransition;
 
-            // create a 2d general layout color image that can be used for storage and sampling in shaders
-            static ImageTemplate General2D( VkFormat format, uint32_t width , uint32_t height, uint32_t mipmap_levels );
-            
-        };
-    };
+		// the command pool is needed to upload data, and/or set the final layout of the image
+		CommandPool *commandPool = nullptr;
+
+		/////////////////////////////////
+
+		// create a general texture image
+		static ImageTemplate Texture( VkImageType imageType, VkImageViewType imageViewType, VkFormat format, uint32_t width, uint32_t height, uint32_t depth, uint32_t mipmapLevels, uint32_t arrayLayers, CommandPool *commandPool = nullptr, const void *sourcePtr = nullptr, size_t sourceSize = 0, const std::vector<VkBufferImageCopy> copyRegions = {} );
+
+		// create a single layer 2d color texture 
+		static ImageTemplate Texture2D( VkFormat format, uint32_t width, uint32_t height, uint32_t mipmapLevels = 1, CommandPool *commandPool = nullptr, const void *sourcePtr = nullptr, size_t sourceSize = 0, const std::vector<VkBufferImageCopy> copyRegions = {} );
+
+		// create a 2d general layout color image that can be used for storage and sampling in shaders
+		static ImageTemplate General2D( VkFormat format, uint32_t width, uint32_t height, uint32_t mipmapLevels = 1, uint32_t imageLayers = 1 );
+	};
+
+};

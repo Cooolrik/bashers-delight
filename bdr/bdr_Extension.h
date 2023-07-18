@@ -6,13 +6,13 @@
 
 namespace bdr
 	{
-	class Extension : public MainSubmodule
+	class Extension : public InstanceSubmodule
 		{
 		public:
 			virtual ~Extension();
 
 		protected:
-			Extension( const Instance* _module );
+			Extension( Instance* _module );
 
 		protected:
 			static void AddExtensionToList( std::vector<const char*>* extensionList, const char* extensionName );

@@ -8,7 +8,7 @@
 
 namespace bdr
 {
-	AllocationsBlock::AllocationsBlock( const Instance* _module ) : MainSubmodule(_module) , CommandPools(_module) , Swapchains(_module)
+	AllocationsBlock::AllocationsBlock( Device* _module ) : DeviceSubmodule(_module) , CommandPools(_module) , Swapchains(_module)
 		{
 		LogThis;
 		}
@@ -35,23 +35,23 @@ namespace bdr
 
 	status_return<Swapchain*> AllocationsBlock::CreateSwapchain( const SwapchainTemplate& parameters )
 		{
-		return this->Swapchains.CreateSubmodule( parameters );
+		return this->Swapchains.Create( parameters );
 		}
 
 	status AllocationsBlock::DestroySwapchain( Swapchain *swapchain )
 		{
-		CheckCall( this->Swapchains.DestroySubmodule( swapchain ) );
+		CheckCall( this->Swapchains.Destroy( swapchain ) );
 		return status::ok;
 		}
 
 	status_return<CommandPool*> AllocationsBlock::CreateCommandPool( const CommandPoolTemplate& parameters )
 		{
-		return this->CommandPools.CreateSubmodule( parameters );
+		return this->CommandPools.Create( parameters );
 		}
 
 	status AllocationsBlock::DestroyCommandPool( CommandPool *commandPool )
 		{
-		CheckCall( this->CommandPools.DestroySubmodule( commandPool ) );
+		CheckCall( this->CommandPools.Destroy( commandPool ) );
 		return status::ok;
 		}
 

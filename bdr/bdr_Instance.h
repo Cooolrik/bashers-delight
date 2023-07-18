@@ -167,13 +167,13 @@ namespace bdr
 			VkInstance GetInstanceHandle() const { return this->InstanceHandle; }
 
 			// get the Instance's Device object 
-			bdr::Device *GetDevice() const { return this->Device_.get(); }
+			Device *GetDevice() const { return this->Device_.get(); }
 
 			// get the Instance's extensions
 			vector<Extension*> GetEnabledExtensions() const { return this->EnabledExtensions; }
-			bdr::DescriptorIndexingExtension* GetDescriptorIndexingExtension() const { return this->DescriptorIndexingExtension_.get(); }
-			bdr::BufferDeviceAddressExtension* GetBufferDeviceAddressExtension() const { return this->BufferDeviceAddressExtension_.get(); }
-			bdr::RayTracingExtension* GetRayTracingExtension() const { return this->RayTracingExtension_.get(); }
+			DescriptorIndexingExtension* GetDescriptorIndexingExtension() const { return this->DescriptorIndexingExtension_.get(); }
+			BufferDeviceAddressExtension* GetBufferDeviceAddressExtension() const { return this->BufferDeviceAddressExtension_.get(); }
+			RayTracingExtension* GetRayTracingExtension() const { return this->RayTracingExtension_.get(); }
 
 			//BDRGetMacro( VkPhysicalDevice, PhysicalDevice );
 			//BDRGetMacro( VkDevice, Device );

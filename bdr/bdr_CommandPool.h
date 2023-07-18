@@ -3,40 +3,56 @@
 
 #pragma once
 
-#include "bdr.h"
+#include "bdr_Device.h"
 
 namespace bdr
 	{
-	class CommandPool : public MainSubmodule
+	class CommandPool : public DeviceSubmodule
 		{
 		public:
 			~CommandPool();
 
 		private:
-			friend status_return<CommandPool*> MainSubmoduleMap<CommandPool>::CreateSubmodule<CommandPoolTemplate>( const CommandPoolTemplate& parameters );
-			CommandPool( const Instance* _module );
+			friend status_return<unique_ptr<CommandPool>> Device::CreateObject<CommandPool,CommandPoolTemplate>( const CommandPoolTemplate &parameters );
+			CommandPool( Device* _module );
 			status Setup( const CommandPoolTemplate& parameters );
 
 			VkCommandPool CommandPoolHandle = VK_NULL_HANDLE; 
 
 			CommandBuffer *Buffers = nullptr;
-			const size_t BuffersCount = 0;
+			size_t BuffersCount = 0;
 
-			std::unordered_set<size_t> ActiveBuffers;
 			size_t CurrentBufferIndex = 0;
+			size_t ActiveCount = 0;
+
+			std::unordered_set<CommandBuffer*> ActiveBuffers;
+
+			status UpdateActiveBuffers( bool submitted, bool recorded );
 
 		public:
+			// resets the status of all command buffers to available 
+			// note that the call will fail if there are submitted buffers which are not completed, or if there are command buffers which are currently recording
 			status ResetCommandPool();
 
+			// begin recording to a buffer
 			status_return<CommandBuffer*> BeginCommandBuffer();
+
+			// end recording to a buffer
 			status EndCommandBuffer( CommandBuffer *commandBuffer );
+
+			// submit a recorded buffer, and optionally wait (indefinitely) for it to complete using WaitForCommandBuffer
+			status SubmitCommandBuffer( CommandBuffer *commandBuffer , bool wait = false );
+
+			// for command buffers which are not explicitly submitted, use this to mark as available again
+			status RecycleCommandBuffer( CommandBuffer *commandBuffer );
+
+			// wait for a submitted command buffer to complete. 
+			// if timeout is reached (or timeout == 0 and the buffer is not done), status::not_ready is returned
+			status WaitForCommandBuffer( CommandBuffer *commandBuffer , uint64_t timeout = UINT64_MAX );
 
 			// explicitly cleans up the object, and also destroys all data and objects owned by it
 			status Cleanup();
-
-			// returns true if at least one buffer is currently recording
-			bool IsRecording() const { return !ActiveBuffers.empty(); }
-
+			
 			VkCommandPool GetCommandPoolHandle() const { return CommandPoolHandle; }
 		};
 
@@ -58,15 +74,44 @@ namespace bdr
 			VkCommandBuffer CommandBufferHandle = VK_NULL_HANDLE;
 			size_t BufferIndex = 0; // the buffer index within the CommandPool
 
+			enum State
+				{
+				Available,	// available for use
+				Recording,	// recording
+				Recorded,	// recorded, waiting to be submitted
+				Submitted,	// submitted
+				};
+			State BufferState = State::Available; // the current state of the command buffer
+
+			VkFence SubmitFenceHandle = VK_NULL_HANDLE; // the fence which is signaled upon completion of the buffer processing
+
+			status Reset();
+
 			CommandBuffer();
 			~CommandBuffer();
 
-			//std::vector<VkBufferMemoryBarrier> BufferMemoryBarriers;
-			//std::vector<VkImageMemoryBarrier> ImageMemoryBarriers;
+			std::vector<VkBufferMemoryBarrier> BufferMemoryBarriers;
+			std::vector<VkImageMemoryBarrier> ImageMemoryBarriers;
 
 		public:
 			void BeginRenderPass( VkRenderPass renderPass , VkFramebuffer framebuffer , VkRect2D renderArea , size_t clearValuesCount , const VkClearValue *clearValues );
 			void EndRenderPass();
+			
+			// copy commands
+			void CopyBuffer( const Buffer *srcBuffer , const Buffer *dstBuffer , const std::vector<VkBufferCopy> &copyRegions );
+			void CopyBufferToImage( const Buffer *srcBuffer , const Image *dstImage , VkImageLayout dstImageLayout , const std::vector<VkBufferImageCopy> &copyRegions );
+			void CopyImageToBuffer( const Image *srcImage , VkImageLayout srcImageLayout , const Buffer *dstBuffer , const std::vector<VkBufferImageCopy> &copyRegions );
+
+			// add a memory barrier for a buffer (use PipelineBarrier() to commit the added barriers). If buffer is specified, use it to override the buffer handle
+			void AddBufferMemoryBarrier( const VkBufferMemoryBarrier &bufferMemoryBarrier );
+			void AddBufferMemoryBarrier( const VkBufferMemoryBarrier &bufferMemoryBarrier, const Buffer *buffer );
+
+			// add a memory barrier for an image (use PipelineBarrier() to commit the added barriers). If image is specified, use it to override the image handle
+			void AddImageMemoryBarrier( const VkImageMemoryBarrier &imageMemoryBarrier );
+			void AddImageMemoryBarrier( const VkImageMemoryBarrier &imageMemoryBarrier, const Image *image );
+
+			// creates a command barries with all the added buffer and/or image memory barriers
+			void PipelineBarrier( VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask );
 			
 			//void BindPipeline( Pipeline* pipeline );
 			//
@@ -100,46 +145,6 @@ namespace bdr
 			//    VkDeviceSize offset,
 			//    uint drawCount,
 			//    uint stride
-			//    );
-
-			//void QueueUpBufferMemoryBarrier( 
-			//    VkBuffer      buffer,
-			//    VkAccessFlags srcAccessMask,
-			//    VkAccessFlags dstAccessMask,
-			//    VkDeviceSize  offset,
-			//    VkDeviceSize  size
-			//    );
-
-			//void QueueUpBufferMemoryBarrier(
-			//    const Buffer* buffer,
-			//    VkAccessFlags srcAccessMask,
-			//    VkAccessFlags dstAccessMask,
-			//    VkDeviceSize  offset = 0,
-			//    VkDeviceSize  size = VkDeviceSize( ~0 )
-			//  );
-
-			//void QueueUpImageMemoryBarrier(
-			//    VkImage image,
-			//    VkImageLayout oldLayout,
-			//    VkImageLayout newLayout,
-			//    VkAccessFlags srcAccessMask,
-			//    VkAccessFlags dstAccessMask,
-			//    VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT
-			//    );
-
-			//void QueueUpImageMemoryBarrier(
-			//    const Image* image,
-			//    VkImageLayout oldLayout,
-			//    VkImageLayout newLayout,
-			//    VkAccessFlags srcAccessMask,
-			//    VkAccessFlags dstAccessMask,
-			//    VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT
-			//    );
-
-			//// creates a command barries with queued up barriers
-			//void PipelineBarrier(
-			//    VkPipelineStageFlags srcStageMask,
-			//    VkPipelineStageFlags dstStageMask
 			//    );
 
 			//void DispatchCompute( 

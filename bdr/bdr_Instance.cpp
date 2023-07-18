@@ -473,7 +473,9 @@ namespace bdr
 		allocatorInfo.physicalDevice = pDevice->PhysicalDeviceHandle;
 		allocatorInfo.device = pDevice->DeviceHandle;
 		allocatorInfo.instance = this->InstanceHandle;
-		allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+		allocatorInfo.flags = 0;
+		if( this->BufferDeviceAddressExtension_.get() )
+			allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 		CheckCall( vmaCreateAllocator( &allocatorInfo, &pDevice->MemoryAllocatorHandle ) );
 
 		// transfer the device to the Instance object
@@ -586,85 +588,7 @@ namespace bdr
 //
 //	return buffer;
 //	}
-//
-//template<class B, class BT> B* bdr::Instance::NewBuffer( const BT& bt ) const
-//	{
-//	B* buffer = new B( this );
-//
-//	// create the buffer using vma and the parameters
-//	VLK_CALL( vmaCreateBuffer(
-//		this->MemoryAllocator,
-//		&bt.BufferCreateInfo,
-//		&bt.AllocationCreateInfo,
-//		&buffer->BufferHandle,
-//		&buffer->Allocation,
-//		nullptr
-//	) );
-//	buffer->BufferSize = bt.BufferCreateInfo.size;
-//
-//	// optionally upload data to the buffer
-//	if(bt.UploadSourcePtr)
-//		{
-//		// map either a staging buffer or the buffer directly
-//		if(bt.AllocationCreateInfo.usage == VMA_MEMORY_USAGE_CPU_ONLY ||
-//			bt.AllocationCreateInfo.usage == VMA_MEMORY_USAGE_CPU_TO_GPU)
-//			{
-//			// we can map the buffer directly, copy the memory manually
-//			uint8_t* mem_ptr = (uint8_t*)buffer->MapMemory();
-//
-//			// copy all regions
-//			for(VkBufferCopy bc : bt.UploadBufferCopies)
-//				{
-//#ifdef _DEBUG
-//				VkDeviceSize src_end_index = bc.srcOffset + bc.size;
-//				VkDeviceSize dst_end_index = bc.dstOffset + bc.size;
-//
-//				if(src_end_index > bt.UploadSourceSize ||
-//					dst_end_index > bt.UploadSourceSize)
-//					{
-//					throw runtime_error( "Error: CreateBuffer() copy offset is out of bounds" );
-//					}
-//#endif
-//				uint8_t* cpy_src = (uint8_t*)bt.UploadSourcePtr + bc.srcOffset;
-//				uint8_t* cpy_dst = mem_ptr + bc.dstOffset;
-//				memcpy( cpy_dst, cpy_src, (size_t)bc.size );
-//				}
-//
-//			// done with the buffer
-//			buffer->UnmapMemory();
-//			}
-//		else
-//			{
-//			// GPU copy, use a staging buffer
-//			VkBuffer stagingBuffer;
-//			VmaAllocation stagingBufferMemory;
-//
-//			// create a host visible staging buffer to copy data to
-//			stagingBuffer = this->CreateVulkanBuffer(
-//				VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-//				VMA_MEMORY_USAGE_CPU_ONLY,
-//				bt.UploadSourceSize,
-//				stagingBufferMemory
-//			);
-//
-//			void* dest_ptr;
-//			VLK_CALL( vmaMapMemory( this->MemoryAllocator, stagingBufferMemory, &dest_ptr ) );
-//			memcpy( dest_ptr, bt.UploadSourcePtr, (size_t)bt.UploadSourceSize );
-//			vmaUnmapMemory( this->MemoryAllocator, stagingBufferMemory );
-//
-//			// now transfer the data to the device local buffer, using a single time command
-//			VkCommandBuffer cmd = this->BeginInternalCommandBuffer();
-//			vkCmdCopyBuffer( cmd, stagingBuffer, buffer->GetBuffer(), (uint)bt.UploadBufferCopies.size(), bt.UploadBufferCopies.data() );
-//			this->EndAndSubmitInternalCommandBuffer( cmd );
-//
-//			// done with the staging buffer
-//			vmaDestroyBuffer( this->MemoryAllocator, stagingBuffer, stagingBufferMemory );
-//			}
-//		}
-//
-//	// done, return buffer
-//	return buffer;
-//	}
+
 //
 //
 //
@@ -1503,76 +1427,7 @@ namespace bdr
 //
 //	return pool;
 //	}
-//
-//bdr::Image* bdr::Instance::CreateImage( const ImageTemplate &it ) 
-//	{
-//	Image* image = new Image( this );
-//	
-//	VLK_CALL( vmaCreateImage( 
-//		this->MemoryAllocator, 
-//		&it.ImageCreateInfo, 
-//		&it.AllocationCreateInfo, 
-//		&image->ImageHandle, 
-//		&image->Allocation, 
-//		nullptr 
-//		) );
-//
-//	// optionally upload pixel data to the image
-//	if(it.UploadSourcePtr)
-//		{
-//		// create a staging buffer to copy the pixel data to
-//		VmaAllocation stagingBufferMemory;
-//		VkBuffer stagingBuffer = this->CreateVulkanBuffer(
-//			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-//			VMA_MEMORY_USAGE_CPU_ONLY,
-//			it.UploadSourceSize,
-//			stagingBufferMemory
-//		);
-//
-//		// map the CPU buffer
-//		void* memoryPtr;
-//		VLK_CALL( vmaMapMemory( this->MemoryAllocator, stagingBufferMemory, &memoryPtr ) );
-//		memcpy( memoryPtr, it.UploadSourcePtr, static_cast<size_t>(it.UploadSourceSize) );
-//		vmaUnmapMemory( this->MemoryAllocator, stagingBufferMemory );
-//
-//		// transition image to transfer optimal so we can copy to it
-//		VkImageMemoryBarrier imageMemoryBarrier = it.UploadLayoutTransition;
-//		imageMemoryBarrier.image = image->ImageHandle;
-//		VkCommandBuffer commandBuffer = this->BeginInternalCommandBuffer();
-//		vkCmdPipelineBarrier( commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier );
-//		this->EndAndSubmitInternalCommandBuffer( commandBuffer );
-//
-//		// copy from the buffer to the image
-//		commandBuffer = this->BeginInternalCommandBuffer();
-//		vkCmdCopyBufferToImage( commandBuffer, stagingBuffer, image->ImageHandle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)it.UploadBufferImageCopies.size(), it.UploadBufferImageCopies.data() );
-//		this->EndAndSubmitInternalCommandBuffer( commandBuffer );
-//
-//		// done with the buffer
-//		vmaDestroyBuffer( this->MemoryAllocator, stagingBuffer, stagingBufferMemory );
-//		}
-//
-//	// transition image to final layout
-//	if(it.TransitionImageLayout)
-//		{
-//		VkImageMemoryBarrier imageMemoryBarrier = it.FinalLayoutTransition;
-//		imageMemoryBarrier.image = image->ImageHandle;
-//
-//		VkPipelineStageFlags srcStageMask = it.UploadSourcePtr ? VK_PIPELINE_STAGE_TRANSFER_BIT : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-//		VkPipelineStageFlags destStageMask = it.FinalLayoutStageMask;
-//
-//		VkCommandBuffer commandBuffer = this->BeginInternalCommandBuffer();
-//		vkCmdPipelineBarrier( commandBuffer, srcStageMask, destStageMask, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier );
-//		this->EndAndSubmitInternalCommandBuffer( commandBuffer );
-//		}
-//
-//	// create the image view
-//	VkImageViewCreateInfo imageViewCreateInfo = it.ImageViewCreateInfo;
-//	imageViewCreateInfo.image = image->ImageHandle;
-//	VLK_CALL( vkCreateImageView( this->Device, &imageViewCreateInfo, nullptr, &image->ImageView ) );
-//
-//	return image;
-//	}
-//
+
 //bdr::Sampler* bdr::Instance::CreateSampler( const SamplerTemplate& _st )
 //	{
 //	Sampler* sampler = new Sampler( this );

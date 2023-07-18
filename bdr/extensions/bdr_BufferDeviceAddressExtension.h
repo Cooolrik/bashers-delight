@@ -11,7 +11,7 @@ namespace bdr
         private:
             // The extension can only be created by the Instance::Create method
             friend status_return<unique_ptr<Instance>> Instance::Create( const InstanceTemplate& parameters );
-            BufferDeviceAddressExtension( const Instance* _instance ) : Extension(_instance) {};
+            BufferDeviceAddressExtension( Instance* _instance ) : Extension(_instance) {};
 
             VkPhysicalDeviceBufferDeviceAddressFeaturesKHR BufferDeviceAddressFeaturesQuery{};
             VkPhysicalDeviceBufferDeviceAddressFeaturesKHR BufferDeviceAddressFeaturesCreate{};

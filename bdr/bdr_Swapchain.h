@@ -3,20 +3,19 @@
 
 #pragma once
 
-#include "bdr.h"
-#include "bdr_AllocationsBlock.h"
+#include "bdr_Device.h"
 
 namespace bdr 
 	{
-	class Swapchain : public MainSubmodule
+	class Swapchain : public DeviceSubmodule
 		{
 		public:
 			~Swapchain();
 
 		private:
-			friend status_return<Swapchain*> SubmoduleMap<Instance,Swapchain>::CreateSubmodule<SwapchainTemplate>( const SwapchainTemplate& parameters );
-			Swapchain( const Instance* _module );
-			status Setup( const bdr::SwapchainTemplate& parameters );
+			friend status_return<unique_ptr<Swapchain>> Device::CreateObject<Swapchain,SwapchainTemplate>( const SwapchainTemplate &parameters );
+			Swapchain( Device* _module );
+			status Setup( const SwapchainTemplate& parameters );
 
 			VkSwapchainKHR SwapchainHandle = VK_NULL_HANDLE;
 
@@ -123,7 +122,7 @@ namespace bdr
 		};
 
 	// Swapchain template creation parameters
-	// Optional values will be handeled automatically if not set.
+	// Optional values will be handled automatically if not set.
 	class SwapchainTemplate
 		{
 		public:

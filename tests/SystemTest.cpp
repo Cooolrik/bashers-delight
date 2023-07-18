@@ -15,7 +15,11 @@
 #include <bdr/bdr_Device.h>
 #include <bdr/bdr_CommandPool.h>
 #include <bdr/bdr_AllocationsBlock.h>
+#include <bdr/bdr_Image.h>
+#include <bdr/bdr_Buffer.h>
 //#include <bdr/bdr_Swapchain.h>
+
+#include "TestImages.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -52,6 +56,13 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverity
 	std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
 	return VK_FALSE;
 	}
+
+struct ubo
+	{
+	float a;
+	float b;
+	};
+
 
 void run()
 	{
@@ -101,6 +112,27 @@ void run()
 	CheckRetValCall( allocationsBlock , device->CreateAllocationsBlock() );
 
 	CheckRetValCall( commandPool , allocationsBlock->CreateCommandPool( bdr::CommandPoolTemplate() ) );
+
+	ubo uboobj = {};
+	uboobj.a = 1.f;
+	uboobj.b = 2.f;
+	CheckRetValCall( buffer , device->CreateObject<Buffer>( BufferTemplate::UniformBuffer( sizeof(uboobj), &uboobj, commandPool ) ) );
+	buffer.reset();
+
+	TestImage<sRGB> texture2d;
+	texture2d.Setup(8,8);
+	CheckRetValCall( image, device->CreateObject<Image>( texture2d.GetTexture2DTemplate(commandPool) ) );
+	image.reset();
+
+	//CheckRetValCall( image, device->CreateObject<Image>(
+	//	ImageTemplate::Texture2D(
+	//		VK_FORMAT_R8G8B8A8_SRGB,
+	//		1024, 1024, 4,
+	//		commandPool,
+	//		texture2d.imageData.data(),
+	//		texture2d.imageData.size(),
+	//		copyRegions
+	//	) ) );
 
 	std::cout << commandPool << std::endl;
 

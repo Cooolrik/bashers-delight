@@ -3,12 +3,11 @@
 
 #pragma once
 
-#include "bdr.h"
 #include "bdr_Instance.h"
 
 namespace bdr 
 	{
-	class Device : public MainSubmodule
+	class Device : public InstanceSubmodule
 		{
 		public:
 			~Device();
@@ -16,7 +15,7 @@ namespace bdr
 		private:
 			// The device can only be created by the Instance::CreateDevice method
             friend status_return<Device*> Instance::CreateDevice( const DeviceTemplate& parameters );
-			Device( const Instance* _module );
+			Device( Instance* _module );
 
 			VkDevice DeviceHandle = VK_NULL_HANDLE;
 			VkQueue GraphicsQueueHandle = VK_NULL_HANDLE;
@@ -37,8 +36,10 @@ namespace bdr
 
 			VmaAllocator MemoryAllocatorHandle = VK_NULL_HANDLE;
 
-			MainSubmoduleMap<AllocationsBlock> AllocationsBlocks;
+			DeviceAllocationMap<AllocationsBlock> AllocationsBlocks;
 
+			std::mutex GraphicsQueueAccessMutex;
+			
 			//
 			//struct TargetImage
 			//	{
@@ -93,13 +94,27 @@ namespace bdr
 
 			// creates an allocations block. allocations blocks are used to allocate all other 
 			// object types, and there can be any number of allocations blocks in the application.
-			// creation and destruction of allocations blocks should only be done by a single thread
-			// and the block can be handed off to another thread after creation
+			// creation and destruction of allocations blocks is not a thread safe operation, and it is the 
+			// caller's responsibility to syncronize, either by only accessing through a "main thread"
+			// or through a mutex.
 			status_return<AllocationsBlock*> CreateAllocationsBlock();
 
 			// deletes an allocation block.
 			// creation and destruction of allocations blocks should only be done by a single thread
 			status DestroyAllocationsBlock( AllocationsBlock *block );
+
+			// manually create and handover an object. the user will have responsibility of the object after creation
+			template<typename _Ty, typename _TemplateTy>
+			status_return<unique_ptr<_Ty>> CreateObject( const _TemplateTy &parameters )
+			{
+				if( !this || !this->DeviceHandle )
+					return status::not_initialized;
+				auto obj = std::unique_ptr<_Ty>(new _Ty(this));
+				auto res = obj->Setup( parameters );
+				if( !res )
+					return res;
+				return obj;
+			}
 
 			// explicitly cleans up the object, and also destroys all objects owned by it
 			status Cleanup();
@@ -125,6 +140,11 @@ namespace bdr
 
 			// get the memory allocator handle
 			VmaAllocator GetMemoryAllocatorHandle() const { return this->MemoryAllocatorHandle; }
+
+			// thread safe submit commands to the graphics queue
+			status GraphicsQueueSubmit( size_t submitCount, const VkSubmitInfo* submitInfos, VkFence completedFence = nullptr );
+
+
 		};
 
 	// Device template creation parameters

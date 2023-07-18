@@ -7,7 +7,7 @@
 
 namespace bdr
 	{
-	Device::Device( const Instance* _module ) : MainSubmodule(_module) , AllocationsBlocks(_module)
+	Device::Device( Instance* _module ) : InstanceSubmodule(_module) , AllocationsBlocks(this)
 		{
 		LogThis;
 		}
@@ -44,6 +44,18 @@ namespace bdr
 		
 	status Device::Cleanup()
 		{
+		std::lock_guard<std::mutex> lock(this->GraphicsQueueAccessMutex);
+
+		if( this->DeviceHandle )
+			{
+			if( this->GraphicsQueueHandle )
+				{
+				vkQueueWaitIdle( this->GraphicsQueueHandle );
+				}
+
+			vkDeviceWaitIdle( this->DeviceHandle );
+			}
+
 		this->AllocationsBlocks.Cleanup();
 
 		SafeVkDestroy( this->MemoryAllocatorHandle , vmaDestroyAllocator( this->MemoryAllocatorHandle ) );
@@ -55,13 +67,19 @@ namespace bdr
 
 	status_return<AllocationsBlock*> Device::CreateAllocationsBlock()
 		{
-		return AllocationsBlocks.CreateSubmodule( AllocationsBlockTemplate() );
+		return AllocationsBlocks.Create( AllocationsBlockTemplate() );
 		}
 
 	status Device::DestroyAllocationsBlock( AllocationsBlock *block )
 		{
-		CheckCall( AllocationsBlocks.DestroySubmodule(block) );
+		CheckCall( AllocationsBlocks.Destroy(block) );
 		return status_code::ok;
+		}
+
+	status Device::GraphicsQueueSubmit( size_t submitCount, const VkSubmitInfo* submitInfos, VkFence completedFence )
+		{
+		std::lock_guard<std::mutex> lock(this->GraphicsQueueAccessMutex);
+		return vkQueueSubmit( this->GraphicsQueueHandle , (uint)submitCount , submitInfos , completedFence );
 		}
 
 }

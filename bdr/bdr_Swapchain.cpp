@@ -6,7 +6,7 @@
 
 namespace bdr
 {
-	Swapchain::Swapchain( const Instance* _module ) : MainSubmodule(_module) 
+	Swapchain::Swapchain( Device* _module ) : DeviceSubmodule(_module) 
 		{
 		LogThis;
 		}

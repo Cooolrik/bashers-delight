@@ -32,6 +32,7 @@
 #include <memory>
 #include <algorithm>
 #include <stdexcept>
+#include <mutex>
 
 // include Vulkan and VMA 
 #include <vulkan/vulkan.h>
@@ -90,55 +91,62 @@ namespace bdr
     class IndexBuffer;
 	class AllocationsBlock;
 	class AllocationsBlockTemplate;
+	class FramebufferPool;
+	class FramebufferPoolTemplate;
+	class Buffer;
+	class BufferTemplate;
+	class ImageMemoryBarrier;
+	class BufferMemoryBarrier;
 
 	// define submodule class template, which all submodules derive from
 	template <class _ModuleTy> class SubmoduleTemplate
 		{
 		protected:
-			const _ModuleTy* Module;
+			_ModuleTy* Module;
 
 		public:
 			~SubmoduleTemplate() {};
+			_ModuleTy* GetModule() { return this->Module; };
 			const _ModuleTy* GetModule() const { return this->Module; };
 
 		protected:
-			SubmoduleTemplate( const _ModuleTy* _module ) : Module(_module) {};
+			SubmoduleTemplate( _ModuleTy* _module ) : Module(_module) {};
 		};
 
 	// define submodules of the main renderer and extensions
-	using MainSubmodule = SubmoduleTemplate<Instance>;
+	using InstanceSubmodule = SubmoduleTemplate<Instance>;
+	using DeviceSubmodule = SubmoduleTemplate<Device>;
 	using DescriptorIndexingSubmodule = SubmoduleTemplate<DescriptorIndexingExtension>;
 	using BufferDeviceAddressSubmodule = SubmoduleTemplate<BufferDeviceAddressExtension>;
 	using RayTracingSubmodule = SubmoduleTemplate<RayTracingExtension>;
 
-	// a map of Submodules, used to keep allocations grouped
-	template <class _ModuleTy , class _SubmoduleTy> class SubmoduleMap : public SubmoduleTemplate<_ModuleTy>
+	// a map of Submodules, used to allocate, and keep allocations grouped
+	template <class _ModuleTy , class _SubmoduleTy> class AllocationMapTemplate : public SubmoduleTemplate<_ModuleTy>
 		{
 		private:
 			unordered_map<_SubmoduleTy*,unique_ptr<_SubmoduleTy>> moduleMap;
 
 		public:
-			SubmoduleMap( const _ModuleTy *_module ) : SubmoduleTemplate<_ModuleTy>(_module) {}
-			~SubmoduleMap() {}
+			AllocationMapTemplate( _ModuleTy *_module ) : SubmoduleTemplate<_ModuleTy>(_module) {}
+			~AllocationMapTemplate() {}
 
 			// Create an object of the Submodule type. Calls the setup method of the object and checks for errors before inserting into map.
 			// On success, return a copy of the pointer to the user. Note that the submodule object is owned by the map, and
 			// should not be deleted manually.
-			template<class _SubmoduleTemplateTy> status_return<_SubmoduleTy*> CreateSubmodule( const _SubmoduleTemplateTy& parameters )
+			template<class _SubmoduleTemplateTy> status_return<_SubmoduleTy*> Create( const _SubmoduleTemplateTy& parameters )
 				{
-				auto submodule = unique_ptr<_SubmoduleTy>( new _SubmoduleTy( this->GetModule() ) );
-				status result = submodule->Setup( parameters );
-				if( !result )
-					return result;
-				auto pSubmodule = submodule.get();
-				this->moduleMap.insert( { pSubmodule , std::move( submodule ) } );
+				auto result = this->GetModule()->CreateObject<_SubmoduleTy,_SubmoduleTemplateTy>( parameters );
+				if( !result.status() )
+					return result.status();
+				auto pSubmodule = result.value().get();
+				this->moduleMap.insert( { pSubmodule , std::move(result.value()) } );
 				return pSubmodule;
 				}
 
 			// Destroys the specific Submodule object, and removes it from the map.
 			// Note that this is not a necessary step for clean up purposes, the map deletes
 			// the objects automatically.
-			status DestroySubmodule( _SubmoduleTy *pSubmodule )
+			status Destroy( _SubmoduleTy *pSubmodule )
 				{
 				auto it = this->moduleMap.find( pSubmodule );
 				if( it == this->moduleMap.end() )
@@ -156,7 +164,7 @@ namespace bdr
 
 			// Clears all objects owned by the Submodule map explicitly by calling the
 			// Cleanup method. Note that the cleanup will stop if one of the objects
-			// return an error.
+			// returns an error.
 			status Cleanup()
 				{
 				// explicitly Clean all objects and check status return 
@@ -177,10 +185,10 @@ namespace bdr
 		};
 
 	// alias SubmoduleMaps for the main renderer and extensions
-	template<class _SubmoduleTy> using MainSubmoduleMap = SubmoduleMap<Instance,_SubmoduleTy>;
-	template<class _SubmoduleTy> using DescriptorIndexingSubmoduleMap = SubmoduleMap<DescriptorIndexingExtension,_SubmoduleTy>;
-	template<class _SubmoduleTy> using BufferDeviceAddressSubmoduleMap = SubmoduleMap<BufferDeviceAddressExtension,_SubmoduleTy>;
-	template<class _SubmoduleTy> using RayTracingSubmoduleMap = SubmoduleMap<RayTracingExtension,_SubmoduleTy>;
+	template<class _SubmoduleTy> using DeviceAllocationMap = AllocationMapTemplate<Device,_SubmoduleTy>;
+	template<class _SubmoduleTy> using DescriptorIndexingAllocationMap = AllocationMapTemplate<DescriptorIndexingExtension,_SubmoduleTy>;
+	template<class _SubmoduleTy> using BufferDeviceAddressAllocationMap = AllocationMapTemplate<BufferDeviceAddressExtension,_SubmoduleTy>;
+	template<class _SubmoduleTy> using RayTracingAllocationMap = AllocationMapTemplate<RayTracingExtension,_SubmoduleTy>;
 
 	// template method which explicitly cleans up a unique_ptr of a bdr object which is handed to it
 	template<typename _Ty>

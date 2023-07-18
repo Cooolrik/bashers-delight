@@ -30,7 +30,7 @@ FetchContent_Declare(
 	GIT_REPOSITORY https://github.com/Cooolrik/ctle.git
 	GIT_TAG		   main
 )
-FetchContent_MakeAvailable( ctle )						
+FetchContent_MakeAvailable( ctle )
 			
 			
 # build test if this is the main cmake file
@@ -76,12 +76,13 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		
 		./bdr/bdr_AllocationsBlock.cpp
 		./bdr/bdr_AllocationsBlock.h
-		#./bdr/bdr_Buffer.cpp
-		#./bdr/bdr_Buffer.h
+		./bdr/bdr_Buffer.cpp
+		./bdr/bdr_Buffer.h
+		./bdr/bdr_BufferMemoryBarrier.h
 		./bdr/bdr_CommandPool.cpp
 		./bdr/bdr_CommandPool.h
-		./bdr/bdr_FramebufferPool.cpp
-		./bdr/bdr_FramebufferPool.h
+		#./bdr/bdr_FramebufferPool.cpp
+		#./bdr/bdr_FramebufferPool.h
 		#./bdr/bdr_Common.inl
 		#./bdr/bdr_ComputePipeline.cpp
 		#./bdr/bdr_ComputePipeline.h
@@ -97,8 +98,9 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		#./bdr/bdr_GraphicsPipeline.h
 		#./bdr/bdr_Helpers.cpp
 		#./bdr/bdr_Helpers.h
-		#./bdr/bdr_Image.cpp
-		#./bdr/bdr_Image.h
+		./bdr/bdr_Image.cpp
+		./bdr/bdr_Image.h
+		./bdr/bdr_ImageMemoryBarrier.h
 		#./bdr/bdr_IndexBuffer.cpp
 		#./bdr/bdr_IndexBuffer.h
 		./bdr/bdr_Instance.h
@@ -143,6 +145,9 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 	source_group_by_folder( ./bdr bdr ${bdr_files} )			
 	source_group_by_folder( ./tests tests ./tests/SystemTest.cpp )			
 	
+	# using c++17 in tests
+	set (CMAKE_CXX_STANDARD 17)
+	
 	add_executable( 
 		SystemTest
 		
@@ -150,6 +155,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		${bdr_files}
 		
 		# tests
+		./tests/TestImages.h
 		./tests/SystemTest.cpp 
 	)	
 

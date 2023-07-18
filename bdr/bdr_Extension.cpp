@@ -6,7 +6,7 @@
 
 namespace bdr
 {
-	Extension::Extension( const Instance* _module ) : MainSubmodule(_module) 
+	Extension::Extension( Instance* _module ) : InstanceSubmodule(_module) 
 		{
 		LogThis;
 		}

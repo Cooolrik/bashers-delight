@@ -2,15 +2,15 @@
 // Licensed under the MIT license https://github.com/Cooolrik/bashers-delight/blob/main/LICENSE
 #include <bdr/bdr.inl>
 
-#include "bdr_Instance.h"
-#include "bdr_Device.h"
 #include "bdr_CommandPool.h"
+#include "bdr_Buffer.h"
+#include "bdr_Image.h"
 
 //#include "bdr_GraphicsPipeline.h"
 //#include "bdr_ComputePipeline.h"
 //#include "bdr_VertexBuffer.h"
 //#include "bdr_IndexBuffer.h"
-//#include "bdr_Image.h"
+
 
 //#include "Extensions/bdr_RayTracingExtension.h"
 //#include "Extensions/bdr_RayTracingPipeline.h"
@@ -21,7 +21,7 @@
 
 namespace bdr
 {
-	CommandPool::CommandPool( const Instance* _module ) : MainSubmodule(_module) 
+	CommandPool::CommandPool( Device* _module ) : DeviceSubmodule(_module) 
 		{
 		LogThis;
 		}
@@ -30,13 +30,13 @@ namespace bdr
 		{
 		Validate( parameters.BufferCount > 0 , status_code::invalid_param ) << "The parameters.BufferCount cannot be 0" << ValidateEnd;
 		
-		auto device = this->Module->GetDevice();
+		auto device = this->GetModule();
 
 		// create the command pool vulkan object
 		VkCommandPoolCreateInfo poolInfo = {};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		poolInfo.queueFamilyIndex = device->GetPhysicalDeviceQueueGraphicsFamily();
-		poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+		poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 		CheckCall( vkCreateCommandPool( device->GetDeviceHandle(), &poolInfo, nullptr, &this->CommandPoolHandle ) );
 		
 		// allocate buffer objects
@@ -49,12 +49,18 @@ namespace bdr
 		CheckCall( vkAllocateCommandBuffers( device->GetDeviceHandle(), &commandBufferAllocateInfo, bufferObjects.data() ) );
 
 		// fill in the buffer objects
+		VkFenceCreateInfo fenceCreateInfo = {};
+		fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+		this->BuffersCount = parameters.BufferCount;
 		this->Buffers = new CommandBuffer[this->BuffersCount];
 		for( size_t inx=0; inx<this->BuffersCount; ++inx )
 			{
 			this->Buffers[inx].CommandPool_ = this;
 			this->Buffers[inx].BufferIndex = inx;
 			this->Buffers[inx].CommandBufferHandle = bufferObjects[inx];
+
+			CheckCall( vkCreateFence( this->Module->GetDeviceHandle(), &fenceCreateInfo, nullptr, &this->Buffers[inx].SubmitFenceHandle ));
 			}
 
 		return status::ok;
@@ -69,34 +75,102 @@ namespace bdr
 
 	status CommandPool::Cleanup()
 		{
-		SafeVkDestroy( this->CommandPoolHandle , vkDestroyCommandPool( this->Module->GetDevice()->GetDeviceHandle(), this->CommandPoolHandle, nullptr ) )
+		SafeVkDestroy( this->CommandPoolHandle , vkDestroyCommandPool( this->GetModule()->GetDeviceHandle(), this->CommandPoolHandle, nullptr ) )
+		
+		// clean up buffers
+		for( size_t inx=0; inx<this->BuffersCount; ++inx )
+			{
+			vkDestroyFence( this->Module->GetDeviceHandle(), this->Buffers[inx].SubmitFenceHandle, nullptr );
+			}
 		SafeDestroy( this->Buffers );
+		this->BuffersCount = 0;
 
 		return status::ok;
+		}
+	
+	status CommandPool::UpdateActiveBuffers( bool remove_submitted, bool remove_recorded )
+		{
+		// lazily check for submitted buffers which are completed, and remove them from the set
+		auto it = this->ActiveBuffers.begin();
+		while( it != this->ActiveBuffers.end() )
+			{
+			SanityCheck( (*it)->BufferState != CommandBuffer::State::Available );
+
+			bool remove = false;
+
+			// remove submitted, finished buffers
+			if( remove_submitted 
+			 && (*it)->BufferState == CommandBuffer::State::Submitted 
+			 && vkGetFenceStatus( this->GetModule()->GetDeviceHandle() , (*it)->SubmitFenceHandle )	== VK_SUCCESS )
+				{
+				remove = true;
+				}
+
+			// remove recorded, non-submitted buffers
+			if( remove_recorded 
+			 && (*it)->BufferState == CommandBuffer::State::Recorded )
+				{
+				remove = true;
+				}
+			
+			// remove and/or move on
+			if( remove )
+				{
+				// reset state to available, and remove from set of active
+				CheckCall( (*it)->Reset() );
+				it = this->ActiveBuffers.erase( it );
+				}
+			else
+				{
+				// move on
+				++it;
+				}
+			}
+
+		return status_code::ok;
 		}
 
 	status CommandPool::ResetCommandPool()
 		{
-		Validate( !this->IsRecording() , status_code::invalid ) << "Cannot reset command pool, there is at least one buffer still recording" << ValidateEnd;
+		// discard all buffers. the call will fail if there are currently buffers currently recording, or submitted but not completed
+		CheckCall( this->UpdateActiveBuffers( true , true ) );
+		Validate( this->ActiveBuffers.empty() , status_code::invalid ) << "Cannot reset command pool, there is at least one buffer which is still active (recording or submitted but not marked as completed)" << ValidateEnd;
 
-		CheckCall( vkResetCommandPool( this->Module->GetDevice()->GetDeviceHandle(), this->CommandPoolHandle, 0 ) );
+#ifndef NDEBUG
+		// make sure all buffers are marked as available
+		for( size_t inx=0; inx<this->BuffersCount; ++inx )
+			{
+			SanityCheck( this->Buffers[inx].BufferState == CommandBuffer::State::Available );
+			}
+#endif//NDEBUG
+
+		CheckCall( vkResetCommandPool( this->GetModule()->GetDeviceHandle(), this->CommandPoolHandle, 0 ) );
 		return status_code::ok;
 		}
 
 	status_return<CommandBuffer*> CommandPool::BeginCommandBuffer()
 		{
-		Validate( this->ActiveBuffers.size() < this->BuffersCount , status_code::invalid ) << "Cannot allocate buffer for recording, they are all used up." << ValidateEnd;
+		// if we are out of buffers, update the ones which have been submitted, and check again
+		if( this->ActiveBuffers.size() >= this->BuffersCount )
+			{
+			CheckCall( this->UpdateActiveBuffers( true , false ) );
+			Validate( this->ActiveBuffers.size() < this->BuffersCount , status_code::invalid ) << "Cannot allocate a buffer for recording, they are all used up." << ValidateEnd;
+			}
 
 		// look for an available buffer
 		// round robin look using CurrentBufferIndex
 		for(;;)
 			{
 			this->CurrentBufferIndex = (this->CurrentBufferIndex + 1) % this->BuffersCount;
-			if( this->ActiveBuffers.find( this->CurrentBufferIndex ) == this->ActiveBuffers.end() )
+			if( this->Buffers[this->CurrentBufferIndex].BufferState == CommandBuffer::State::Available )
 				break;
 			}
-
 		SanityCheck( this->Buffers[this->CurrentBufferIndex].BufferIndex == this->CurrentBufferIndex );
+
+		// mark buffer as recording and place in active set
+		this->Buffers[this->CurrentBufferIndex].BufferState = CommandBuffer::State::Recording;
+		this->ActiveBuffers.insert( &this->Buffers[this->CurrentBufferIndex] );
+		SanityCheck( this->ActiveBuffers.size() <= this->BuffersCount );
 
 		// begin the buffer
 		VkCommandBufferBeginInfo commandBufferBeginInfo{};
@@ -111,15 +185,88 @@ namespace bdr
 
 	status CommandPool::EndCommandBuffer( CommandBuffer *commandBuffer )
 		{
-		Validate( this->ActiveBuffers.find( commandBuffer->BufferIndex ) != this->ActiveBuffers.end() , status_code::invalid_param ) << "Invalid parameter: The command buffer " << commandBuffer << "is not recording" << ValidateEnd;
+		Validate( commandBuffer->BufferState == CommandBuffer::State::Recording , status_code::invalid_param ) << "Invalid parameter: The command buffer " << commandBuffer << " is not recording" << ValidateEnd;
+		Validate( this->ActiveBuffers.find(commandBuffer) != this->ActiveBuffers.end() , status_code::invalid_param ) << "Invalid parameter: The command buffer " << commandBuffer << " does not belong to this pools active set" << ValidateEnd;
 
 		SanityCheck( &this->Buffers[commandBuffer->BufferIndex] == commandBuffer );
 
-		// done recording to the buffer
+		// done recording to the buffer, mark as recorded
 		CheckCall( vkEndCommandBuffer( commandBuffer->CommandBufferHandle ) );
+		commandBuffer->BufferState = CommandBuffer::State::Recorded;
+
+		return status_code::ok;
+		}
+	
+	status CommandPool::SubmitCommandBuffer( CommandBuffer *commandBuffer , bool wait )
+		{
+		Validate( commandBuffer->BufferState == CommandBuffer::State::Recorded , status_code::invalid_param ) << "Invalid parameter: The command buffer " << commandBuffer << " is not recorded and cannot be submitted" << ValidateEnd;
+		Validate( this->ActiveBuffers.find(commandBuffer) != this->ActiveBuffers.end() , status_code::invalid_param ) << "Invalid parameter: The command buffer " << commandBuffer << " does not belong to this pools active set" << ValidateEnd;
+
+		SanityCheck( &this->Buffers[commandBuffer->BufferIndex] == commandBuffer );
+
+		// reset the submit fence
+		vkResetFences( this->GetModule()->GetDeviceHandle() , 1 , &commandBuffer->SubmitFenceHandle );
+
+		// submit to graphics queue
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffer->CommandBufferHandle;
+		CheckCall( this->GetModule()->GraphicsQueueSubmit( 1, &submitInfo, commandBuffer->SubmitFenceHandle ) );
+
+		// mark as submitted
+		commandBuffer->BufferState = CommandBuffer::State::Submitted;
+
+		// if set, wait for it to complete (note: this waits indefinitely)
+		if( wait )
+			{
+			CheckCall( WaitForCommandBuffer( commandBuffer , UINT64_MAX ) ); 
+			}
+
+		return status_code::ok;
+		}
+
+	status CommandPool::RecycleCommandBuffer( CommandBuffer *commandBuffer )
+		{
+		Validate( commandBuffer->BufferState == CommandBuffer::State::Recorded , status_code::invalid_param ) << "Invalid parameter: The command buffer " << commandBuffer << " is not recorded, and cannot be recycled" << ValidateEnd;
+		Validate( this->ActiveBuffers.find(commandBuffer) != this->ActiveBuffers.end() , status_code::invalid_param ) << "Invalid parameter: The command buffer " << commandBuffer << " does not belong to this pools active set" << ValidateEnd;
+	
+		SanityCheck( &this->Buffers[commandBuffer->BufferIndex] == commandBuffer );
+
+		// mark as available and remove from active set
+		CheckCall( commandBuffer->Reset() );
+		this->ActiveBuffers.erase( commandBuffer );
+
+		return status_code::ok;
+		}
+
+	status CommandPool::WaitForCommandBuffer( CommandBuffer *commandBuffer , uint64_t timeout )
+		{
+		auto deviceHandle = this->GetModule()->GetDeviceHandle();
+
+		Validate( commandBuffer->BufferState == CommandBuffer::State::Submitted , status_code::invalid_param ) << "Invalid parameter: The command buffer " << commandBuffer << " is not submitted, and cannot be wait for" << ValidateEnd;
+		Validate( this->ActiveBuffers.find(commandBuffer) != this->ActiveBuffers.end() , status_code::invalid_param ) << "Invalid parameter: The command buffer " << commandBuffer << " does not belong to this pools active set" << ValidateEnd;
 		
-		// remove from active set
-		this->ActiveBuffers.erase( commandBuffer->BufferIndex );
+		SanityCheck( &this->Buffers[commandBuffer->BufferIndex] == commandBuffer );
+
+		// wait for it to complete
+		VkResult result = vkWaitForFences( deviceHandle , 1 , &commandBuffer->SubmitFenceHandle , true , timeout );
+		if( result != VK_SUCCESS )
+			{
+			// if we have a timeout, just return the not_ready status, this is no error
+			if( result == VK_TIMEOUT )
+				{
+				return status::not_ready;
+				}
+
+			LogError << "Call: to vkWaitForFences failed, returned VkResult code: " << result << LogEnd;
+			return result;
+			}
+
+		// mark as available, and remove from active set
+		CheckCall( commandBuffer->Reset() );
+		this->ActiveBuffers.erase( commandBuffer );
+
 		return status_code::ok;
 		}
 
@@ -129,6 +276,19 @@ namespace bdr
 
 	CommandBuffer::~CommandBuffer()
 		{
+		}
+
+	status CommandBuffer::Reset()
+		{
+		Validate( this->CommandBufferHandle , status::not_initialized ) << "Trying to reset a buffer which is not allocated" << ValidateEnd;
+
+		if( this->BufferState != State::Available )
+			{
+			CheckCall( vkResetCommandBuffer( this->CommandBufferHandle , 0 ) );
+			this->BufferState = State::Available;
+			}
+
+		return status::ok;
 		}
 
 	void CommandBuffer::BeginRenderPass( VkRenderPass renderPass , VkFramebuffer framebuffer , VkRect2D renderArea , size_t clearValuesCount , const VkClearValue *clearValues )
@@ -148,6 +308,63 @@ namespace bdr
 		{
 		vkCmdEndRenderPass( this->CommandBufferHandle );
 		}
+
+	void CommandBuffer::CopyBuffer( const Buffer *srcBuffer , const Buffer *dstBuffer , const std::vector<VkBufferCopy> &copyRegions )
+		{
+		vkCmdCopyBuffer( this->CommandBufferHandle, srcBuffer->GetBufferHandle(), dstBuffer->GetBufferHandle(), (uint)copyRegions.size(), copyRegions.data() );
+		}
+
+	void CommandBuffer::CopyBufferToImage( const Buffer *srcBuffer, const Image *dstImage, VkImageLayout dstImageLayout, const std::vector<VkBufferImageCopy> &copyRegions )
+		{
+		vkCmdCopyBufferToImage( this->CommandBufferHandle, srcBuffer->GetBufferHandle() , dstImage->GetImageHandle(), dstImageLayout , (uint)copyRegions.size(), copyRegions.data() );
+		}
+
+	void CommandBuffer::CopyImageToBuffer( const Image *srcImage, VkImageLayout srcImageLayout, const Buffer *dstBuffer, const std::vector<VkBufferImageCopy> &copyRegions )
+		{
+		vkCmdCopyImageToBuffer( this->CommandBufferHandle, srcImage->GetImageHandle(), srcImageLayout , dstBuffer->GetBufferHandle() , (uint)copyRegions.size(), copyRegions.data() );
+		}
+		
+	void CommandBuffer::AddBufferMemoryBarrier( const VkBufferMemoryBarrier &bufferMemoryBarrier )
+		{
+		this->BufferMemoryBarriers.push_back( bufferMemoryBarrier );
+		}
+
+	void CommandBuffer::AddBufferMemoryBarrier( const VkBufferMemoryBarrier &bufferMemoryBarrier, const Buffer *buffer )
+		{
+		this->AddBufferMemoryBarrier( bufferMemoryBarrier );
+		this->BufferMemoryBarriers.back().buffer = buffer->GetBufferHandle();
+		}
+
+	void CommandBuffer::AddImageMemoryBarrier( const VkImageMemoryBarrier &imageMemoryBarrier )
+		{
+		this->ImageMemoryBarriers.push_back( imageMemoryBarrier );
+		}
+
+	void CommandBuffer::AddImageMemoryBarrier( const VkImageMemoryBarrier &imageMemoryBarrier, const Image *image )
+		{
+		this->AddImageMemoryBarrier( imageMemoryBarrier );
+		this->ImageMemoryBarriers.back().image = image->GetImageHandle();
+		}
+
+	void CommandBuffer::PipelineBarrier( VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask )
+		{
+		const VkBufferMemoryBarrier *pbuf = this->BufferMemoryBarriers.data();
+		const VkImageMemoryBarrier *pimg = this->ImageMemoryBarriers.data();
+
+		vkCmdPipelineBarrier( 
+			this->CommandBufferHandle, 
+			srcStageMask, 
+			dstStageMask, 
+			VK_DEPENDENCY_BY_REGION_BIT,
+			0, nullptr, 
+			(uint)this->BufferMemoryBarriers.size(), pbuf,
+			(uint)this->ImageMemoryBarriers.size(), pimg
+			);
+
+		BufferMemoryBarriers.clear();
+		ImageMemoryBarriers.clear();
+		}
+
 
 	//void CommandBuffer::BindPipeline( Pipeline* pipeline )
 	//	{
@@ -302,26 +519,6 @@ namespace bdr
 	//		);
 	//	}
 
-	//void CommandBuffer::PipelineBarrier( VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask )
-	//	{
-	//	ASSERT_RECORDING();
-
-	//	VkBufferMemoryBarrier* pbuf = this->BufferMemoryBarriers.data();
-	//	VkImageMemoryBarrier* pimg = this->ImageMemoryBarriers.data();
-
-	//	vkCmdPipelineBarrier( 
-	//		this->Buffers[this->CurrentBufferIndex], 
-	//		srcStageMask, 
-	//		dstStageMask, 
-	//		VK_DEPENDENCY_BY_REGION_BIT,
-	//		0, nullptr, 
-	//		(uint)this->BufferMemoryBarriers.size(), pbuf,
-	//		(uint)this->ImageMemoryBarriers.size(), pimg
-	//		);
-
-	//	BufferMemoryBarriers.clear();
-	//	ImageMemoryBarriers.clear();
-	//	}
 
 	//void CommandBuffer::DispatchCompute( uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ )
 	//	{
