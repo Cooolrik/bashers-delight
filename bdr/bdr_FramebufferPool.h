@@ -7,6 +7,7 @@
 
 namespace bdr 
 	{
+	// FramebufferPool keeps a number of frame buffers. Each framebuffer has a number of images attached, in a common setup.
 	class FramebufferPool : public DeviceSubmodule
 		{
 		public:
@@ -14,11 +15,16 @@ namespace bdr
 
 		private:
 			friend status_return<unique_ptr<FramebufferPool>> Device::CreateObject<FramebufferPool,FramebufferPoolTemplate>( const FramebufferPoolTemplate &parameters );
-			FramebufferPool( const Device* _module );
+			FramebufferPool( Device* _module );
 			status Setup( const FramebufferPoolTemplate& parameters );
 
-			// the handles of each framebuffer in the pool
-			vector<VkFramebuffer> FramebuffersHandles;
+			class Framebuffer
+				{
+				public:
+					vector<unique_ptr<Image>> Images;
+					VkFramebuffer FramebufferHandle;
+				};
+			vector<Framebuffer> Framebuffers;
 
 			// surface formats of the images, and count of vector defines the number of images in each framebuffer
 			vector<VkFormat> ImageFormats;
@@ -31,7 +37,7 @@ namespace bdr
 			status Cleanup();
 
 			// get the number of framebuffers in the pool
-			size_t GetFramebuffersCount() const { return this->FramebuffersHandles.size(); }
+			size_t GetFramebuffersCount() const { return this->Framebuffers.size(); }
 
 			// get the number of images per framebuffer
 			size_t GetImagesPerFramebuffer() const { return this->ImageFormats.size(); }
@@ -48,15 +54,31 @@ namespace bdr
 		{
 		public:
 			// the number of Framebuffers to be created in the pool
-			// all framebuffer will have the same layout, as defined by the parameters in the template
-			size_t FramebuffersCount = 1;
+			// Note: all framebuffers in the pool share the same layout
+			size_t framebuffersCount = 1;
 
-			// surface formats of the images, one per each image in one of the framebuffers in the pool
-			// the index of the format in the vector will be the index of the image in each frambuffer
-			vector<VkFormat> ImageFormats;
+			// the extent in pixels of each of the images and framebuffers in the pool
+			VkExtent2D extent = {};
 
-			// the extents in pixels of the framebuffers in the pool
-			VkExtent2D ImagesExtent = {};
+			// image setup of each framebuffer
+			class ImageSetup
+				{
+				public:
+					VkFormat format;
+					VkSampleCountFlagBits samples;
+				};
+			vector<ImageSetup> imageSetups;
+
+			// the render pass to use for the framebuffer
+			const RenderPass *renderPass = nullptr;
+
+			// the command pool to use for the setup
+			CommandPool *commandPool = nullptr;
+
+			/////////////////////////////////
+
+			// make a framebuffer pool that has the same setup as a renderpass' attachments
+			static status_return<FramebufferPoolTemplate> FromRenderPass( size_t framebuffersCount, uint32_t width, uint32_t height, const RenderPass *renderPass, CommandPool *commandPool );
 		};
 
 	};

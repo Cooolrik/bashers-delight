@@ -163,8 +163,11 @@ class ImageTemplate
 		// create a single layer 2d color texture 
 		static ImageTemplate Texture2D( VkFormat format, uint32_t width, uint32_t height, uint32_t mipmapLevels = 1, CommandPool *commandPool = nullptr, const void *sourcePtr = nullptr, size_t sourceSize = 0, const std::vector<VkBufferImageCopy> copyRegions = {} );
 
-		// create a 2d general layout color image that can be used for storage and sampling in shaders
-		static ImageTemplate General2D( VkFormat format, uint32_t width, uint32_t height, uint32_t mipmapLevels = 1, uint32_t imageLayers = 1 );
-	};
+		// create a 2d general layout (color) image that can be used for storage and sampling in shaders
+		//static ImageTemplate General2D( VkFormat format, uint32_t width, uint32_t height, uint32_t mipmapLevels = 1 );
 
+		// create a color or depth attachment image
+		static ImageTemplate ColorAttachment( VkFormat format, uint32_t width, uint32_t height, CommandPool *commandPool, VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT );
+		static ImageTemplate DepthAttachment( VkFormat format, uint32_t width, uint32_t height, CommandPool *commandPool, VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT );
+	};
 };

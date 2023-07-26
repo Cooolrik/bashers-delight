@@ -97,6 +97,8 @@ namespace bdr
 	class BufferTemplate;
 	class ImageMemoryBarrier;
 	class BufferMemoryBarrier;
+	class RenderPass;
+	class RenderPassTemplate;
 
 	// define submodule class template, which all submodules derive from
 	template <class _ModuleTy> class SubmoduleTemplate

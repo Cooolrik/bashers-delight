@@ -81,8 +81,8 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		./bdr/bdr_BufferMemoryBarrier.h
 		./bdr/bdr_CommandPool.cpp
 		./bdr/bdr_CommandPool.h
-		#./bdr/bdr_FramebufferPool.cpp
-		#./bdr/bdr_FramebufferPool.h
+		./bdr/bdr_FramebufferPool.cpp
+		./bdr/bdr_FramebufferPool.h
 		#./bdr/bdr_Common.inl
 		#./bdr/bdr_ComputePipeline.cpp
 		#./bdr/bdr_ComputePipeline.h
@@ -96,8 +96,8 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		./bdr/bdr_Extension.h
 		#./bdr/bdr_GraphicsPipeline.cpp
 		#./bdr/bdr_GraphicsPipeline.h
-		#./bdr/bdr_Helpers.cpp
-		#./bdr/bdr_Helpers.h
+		./bdr/bdr_Helpers.cpp
+		./bdr/bdr_Helpers.h
 		./bdr/bdr_Image.cpp
 		./bdr/bdr_Image.h
 		./bdr/bdr_ImageMemoryBarrier.h
@@ -107,6 +107,8 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 		./bdr/bdr_Instance.cpp
 		#./bdr/bdr_Pipeline.cpp
 		#./bdr/bdr_Pipeline.h
+		./bdr/bdr_RenderPass.cpp
+		./bdr/bdr_RenderPass.h
 		#./bdr/bdr_Sampler.cpp
 		#./bdr/bdr_Sampler.h
 		#./bdr/bdr_ShaderModule.cpp

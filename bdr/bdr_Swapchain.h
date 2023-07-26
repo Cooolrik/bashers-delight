@@ -17,17 +17,10 @@ namespace bdr
 			Swapchain( Device* _module );
 			status Setup( const SwapchainTemplate& parameters );
 
-			VkSwapchainKHR SwapchainHandle = VK_NULL_HANDLE;
+			VkSwapchainKHR SwapchainHandle = nullptr;
+			vector<VkImage> SwapchainImageHandles;
 
-			VkPresentModeKHR PresentMode{};
-			VkExtent2D RenderExtent{};
-
-			VkSurfaceFormatKHR SurfaceFormat{};
-
-			VkFormat SurfaceDepthFormat{};
-			bool DepthFormatHasStencil = false;
-
-			unique_ptr<SwapchainTemplate> Template;
+			//unique_ptr<FramebufferPool> Framebuffers;
 
 			//VkRenderPass RenderPassHandle = nullptr;
 			//vector<VkFramebuffer> FramebuffersHandles;
@@ -40,7 +33,6 @@ namespace bdr
 			//
 			//vector<TargetImage> TargetImages;
 			//
-			//vector<VkImage> SwapchainImageHandles;
 			
 			//std::vector<VkSemaphore> ImageAvailableSemaphores;
 			//std::vector<VkSemaphore> RenderFinishedSemaphores;
@@ -48,6 +40,8 @@ namespace bdr
 			//std::vector<VkFence> ImagesInFlight;
 			//uint CurrentFrame = 0;
 			//uint CurrentImage = 0;
+
+			unique_ptr<SwapchainTemplate> Template;
 
 			void DeleteSwapchain();
 
@@ -126,20 +120,23 @@ namespace bdr
 	class SwapchainTemplate
 		{
 		public:
-			// The wanted surface format.
-			optional_value<VkSurfaceFormatKHR> SurfaceFormat;
+			// Number of images in the swap chain. 
+			uint swapchainLength;
 
-			// The wanted surface depth format.
-			optional_value<VkFormat> SurfaceDepthFormat;
+			// Selected surface format and color space
+			VkSurfaceFormatKHR surfaceFormat;
 
-			// The wanted presentation format. 
-			optional_value<VkPresentModeKHR> PresentMode;
+			// Surface presentation mode. 
+			VkPresentModeKHR presentMode;
 
-			// The render extents to use on the surface. 
-			optional_value<VkExtent2D> RenderExtent;
+			// Render extents to use 
+			VkExtent2D renderExtent;
 
-			// The number of images in the swap chain. 
-			optional_value<uint> SwapchainLength;
+			////////////////////////
+
+			// Creates a swapchain for the current surface of the provided device, and tries to select the best fit from available modes and formats
+			static status_return<SwapchainTemplate> DeviceCompatible( Device *device, VkExtent2D renderExtent = {0,0}, uint swapchainLength = 0 );
+
 		};
 
 	};

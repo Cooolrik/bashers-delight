@@ -17,7 +17,9 @@
 #include <bdr/bdr_AllocationsBlock.h>
 #include <bdr/bdr_Image.h>
 #include <bdr/bdr_Buffer.h>
-//#include <bdr/bdr_Swapchain.h>
+#include <bdr/bdr_RenderPass.h>
+#include <bdr/bdr_FramebufferPool.h>
+#include <bdr/bdr_Swapchain.h>
 
 #include "TestImages.h"
 
@@ -109,32 +111,35 @@ void run()
 	DeviceTemplate dparams = { surface };
 	CheckRetValCall( device , instance->CreateDevice( dparams ) );
 
+	CheckRetValCall( swapchain , device->CreateObject<Swapchain>( SwapchainTemplate::DeviceCompatible( device ).value() ) );
+
 	CheckRetValCall( allocationsBlock , device->CreateAllocationsBlock() );
 
 	CheckRetValCall( commandPool , allocationsBlock->CreateCommandPool( bdr::CommandPoolTemplate() ) );
+
+	CheckRetValCall( renderPass, device->CreateObject<RenderPass>( RenderPassTemplate::SingleSubPass( VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_D24_UNORM_S8_UINT, VK_SAMPLE_COUNT_1_BIT ) ) );
+
+	CheckRetValCall( framebufferPool, device->CreateObject<FramebufferPool>( FramebufferPoolTemplate::FromRenderPass( 3, 400, 300, renderPass.get(), commandPool ).value() ) );
 
 	ubo uboobj = {};
 	uboobj.a = 1.f;
 	uboobj.b = 2.f;
 	CheckRetValCall( buffer , device->CreateObject<Buffer>( BufferTemplate::UniformBuffer( sizeof(uboobj), &uboobj, commandPool ) ) );
 	buffer.reset();
-
+	
 	TestImage<sRGB> texture2d;
 	texture2d.Setup(8,8);
 	CheckRetValCall( image, device->CreateObject<Image>( texture2d.GetTexture2DTemplate(commandPool) ) );
 	image.reset();
-
-	//CheckRetValCall( image, device->CreateObject<Image>(
-	//	ImageTemplate::Texture2D(
-	//		VK_FORMAT_R8G8B8A8_SRGB,
-	//		1024, 1024, 4,
-	//		commandPool,
-	//		texture2d.imageData.data(),
-	//		texture2d.imageData.size(),
-	//		copyRegions
-	//	) ) );
+	
 
 	std::cout << commandPool << std::endl;
+
+	framebufferPool.reset();
+
+	renderPass.reset();
+
+	swapchain.reset();
 
 	status = Release( instance );
 

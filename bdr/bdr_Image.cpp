@@ -579,8 +579,7 @@ ImageTemplate ImageTemplate::Texture2D( VkFormat format, uint32_t width, uint32_
 	);
 	}
 
-
-//ImageTemplate ImageTemplate::General2D( VkFormat format, uint32_t width, uint32_t height, uint32_t mipmap_levels )
+//ImageTemplate ImageTemplate::General2D( VkFormat format, uint32_t width, uint32_t height, uint32_t mipmapLevels = 1, uint32_t imageLayers = 1 )
 //	{
 //	// setup general 2d image
 //	return Standard2DImage(
@@ -599,9 +598,96 @@ ImageTemplate ImageTemplate::Texture2D( VkFormat format, uint32_t width, uint32_
 //	);
 //	}
 
-// create a 2d color image which is optimized for texture sampling. If source ptr is set, uploads data to the texture. 
+static ImageTemplate AttachmentCommonTemplate( VkFormat format, uint32_t width, uint32_t height, CommandPool *commandPool, VkSampleCountFlagBits samples )
+	{
+	ImageTemplate ret = {};
+
+	ret.imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	ret.imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+	ret.imageCreateInfo.extent.width = width;
+	ret.imageCreateInfo.extent.height = height;
+	ret.imageCreateInfo.extent.depth = 1;
+	ret.imageCreateInfo.mipLevels = 1;
+	ret.imageCreateInfo.arrayLayers = 1;
+	ret.imageCreateInfo.format = format;
+	ret.imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+	ret.imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	ret.imageCreateInfo.samples = samples;
+	ret.imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	ret.imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	ret.imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	ret.imageViewCreateInfo.format = format;
+	ret.imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+	ret.imageViewCreateInfo.subresourceRange.levelCount = 1;
+	ret.imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+	ret.imageViewCreateInfo.subresourceRange.layerCount = 1;
+
+	ret.allocationCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	ret.allocationCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	
+	ret.layoutTransition.set();
+	auto &layoutTransition = ret.layoutTransition.value();
+	
+	layoutTransition.imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	layoutTransition.imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	layoutTransition.imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	layoutTransition.imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	layoutTransition.imageMemoryBarrier.subresourceRange.baseMipLevel = 0;
+	layoutTransition.imageMemoryBarrier.subresourceRange.levelCount = 1;
+	layoutTransition.imageMemoryBarrier.subresourceRange.baseArrayLayer = 0;
+	layoutTransition.imageMemoryBarrier.subresourceRange.layerCount = 1;
+	layoutTransition.imageMemoryBarrier.srcAccessMask = 0;
+
+	ret.commandPool = commandPool;
+
+	return ret;
+	}
 
 
+ImageTemplate ImageTemplate::ColorAttachment( VkFormat format, uint32_t width, uint32_t height, CommandPool *commandPool, VkSampleCountFlagBits samples )
+	{
+	SanityCheck( !HasVulkanFormatDepth(format) );
 
+	ImageTemplate ret = AttachmentCommonTemplate( format, width, height, commandPool, samples );
+
+	// color attachment specifics
+	ret.imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	ret.imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+	auto &layoutTransition = ret.layoutTransition.value();
+	layoutTransition.imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	layoutTransition.imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	layoutTransition.imageMemoryBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+	layoutTransition.destPipelineStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+	return ret;
+	}
+
+ImageTemplate ImageTemplate::DepthAttachment( VkFormat format, uint32_t width, uint32_t height, CommandPool *commandPool, VkSampleCountFlagBits samples )
+	{
+	SanityCheck( HasVulkanFormatDepth(format) );
+	const bool depthFormatHasStencil = HasVulkanFormatStencil(format);
+
+	ImageTemplate ret = AttachmentCommonTemplate( format, width, height, commandPool, samples );
+
+	// depth attachment specifics
+	ret.imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	ret.imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+	auto &layoutTransition = ret.layoutTransition.value();
+	layoutTransition.imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	layoutTransition.imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+	if( depthFormatHasStencil )
+		{
+		layoutTransition.imageMemoryBarrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+	layoutTransition.imageMemoryBarrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+	layoutTransition.destPipelineStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+
+	return ret;
+	}
 
 };

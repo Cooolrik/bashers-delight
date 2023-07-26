@@ -1,4 +1,9 @@
-#include "bdr_Common.inl"
+// Bashers Delight Renderer, Copyright (c) 2023 Ulrik Lindahl
+// Licensed under the MIT license https://github.com/Cooolrik/bashers-delight/blob/main/LICENSE
+#include <bdr/bdr.inl>
+#include <set>
+#include <map>
+
 #include "bdr_Helpers.h"
 
 struct FormatSizes
@@ -240,25 +245,47 @@ static const std::map<VkFormat, FormatSizes> VulkanFormatSizes =
 
 namespace bdr
 	{
-	uint32_t GetVulkanFormatByteSize( VkFormat format )
+	//uint32_t GetVulkanFormatByteSize( VkFormat format )
+	//	{
+	//	std::map<VkFormat, FormatSizes>::const_iterator it = VulkanFormatSizes.find( format );
+	//	if(it == VulkanFormatSizes.end())
+	//		{
+	//		throw runtime_error( "Error: Invalid format in GetVulkanFormatByteSize" );
+	//		}
+	//	return it->second.Size;
+	//	}
+	//
+	//uint32_t GetVulkanFormatChannelCount( VkFormat format )
+	//	{
+	//	std::map<VkFormat, FormatSizes>::const_iterator it = VulkanFormatSizes.find( format );
+	//	if(it == VulkanFormatSizes.end())
+	//		{
+	//		throw runtime_error( "Error: Invalid format in GetVulkanFormatChannelCount" );
+	//		}
+	//	return it->second.Channels;
+	//	}
+		
+	bool HasVulkanFormatDepth( VkFormat format )
 		{
-		std::map<VkFormat, FormatSizes>::const_iterator it = VulkanFormatSizes.find( format );
-		if(it == VulkanFormatSizes.end())
+		static const std::unordered_set<VkFormat> formats =
 			{
-			throw runtime_error( "Error: Invalid format in GetVulkanFormatByteSize" );
-			}
-		return it->second.Size;
+			VK_FORMAT_D32_SFLOAT,
+			VK_FORMAT_D32_SFLOAT_S8_UINT,
+			VK_FORMAT_D24_UNORM_S8_UINT
+			};
+		return formats.find( format ) != formats.end();
 		}
 
-	uint32_t GetVulkanFormatChannelCount( VkFormat format )
+	bool HasVulkanFormatStencil( VkFormat format )
 		{
-		std::map<VkFormat, FormatSizes>::const_iterator it = VulkanFormatSizes.find( format );
-		if(it == VulkanFormatSizes.end())
+		static const std::unordered_set<VkFormat> formats =
 			{
-			throw runtime_error( "Error: Invalid format in GetVulkanFormatChannelCount" );
-			}
-		return it->second.Channels;
+			VK_FORMAT_D32_SFLOAT_S8_UINT,
+			VK_FORMAT_D24_UNORM_S8_UINT
+			};
+		return formats.find( format ) != formats.end();
 		}
+
 	}
 
 
