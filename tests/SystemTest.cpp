@@ -131,9 +131,22 @@ void run()
 	texture2d.Setup(8,8);
 	CheckRetValCall( image, device->CreateObject<Image>( texture2d.GetTexture2DTemplate(commandPool) ) );
 	image.reset();
-	
 
 	std::cout << commandPool << std::endl;
+
+	bool av = framebufferPool->FramebufferIsAvailable();
+
+	auto a1 = framebufferPool->AcquireFramebuffer().value();
+	auto a2 = framebufferPool->AcquireFramebuffer().value();
+	auto a3 = framebufferPool->AcquireFramebuffer().value();
+	auto a4 = framebufferPool->AcquireFramebuffer().value();
+
+	bool av2 = framebufferPool->FramebufferIsAvailable();
+
+	auto b1 = framebufferPool->ReturnFramebuffer( a1 );
+	auto b2 = framebufferPool->ReturnFramebuffer( a2 );
+	auto b3 = framebufferPool->ReturnFramebuffer( a3 );
+	auto b4 = framebufferPool->ReturnFramebuffer( a4 );
 
 	framebufferPool.reset();
 
