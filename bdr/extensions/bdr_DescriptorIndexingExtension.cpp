@@ -9,11 +9,11 @@
 namespace bdr
 {
 
-status bdr::DescriptorIndexingExtension::AddRequiredDeviceExtensions( 
-	VkPhysicalDeviceFeatures2* physicalDeviceFeatures,
-	VkPhysicalDeviceProperties2* /*physicalDeviceProperties*/,
-	std::vector<const char*>* extensionList
-	)
+status bdr::DescriptorIndexingExtension::AddRequiredDeviceExtensions(
+	VkPhysicalDeviceFeatures2 *physicalDeviceFeatures,
+	VkPhysicalDeviceProperties2 * /*physicalDeviceProperties*/,
+	std::vector<const char *> *extensionList
+)
 	{
 	// enable extensions needed for ray tracing
 	Extension::AddExtensionToList( extensionList, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME );
@@ -27,12 +27,12 @@ status bdr::DescriptorIndexingExtension::AddRequiredDeviceExtensions(
 	}
 
 bool bdr::DescriptorIndexingExtension::SelectDevice(
-	const VkSurfaceCapabilitiesKHR& /*surfaceCapabilities*/,
-	const std::vector<VkSurfaceFormatKHR>& /*availableSurfaceFormats*/,
-	const std::vector<VkPresentModeKHR>& /*availablePresentModes*/,
-	const VkPhysicalDeviceFeatures2& /*physicalDeviceFeatures*/,
-	const VkPhysicalDeviceProperties2& /*physicalDeviceProperties*/
-	)
+	const VkSurfaceCapabilitiesKHR & /*surfaceCapabilities*/,
+	const std::vector<VkSurfaceFormatKHR> & /*availableSurfaceFormats*/,
+	const std::vector<VkPresentModeKHR> & /*availablePresentModes*/,
+	const VkPhysicalDeviceFeatures2 & /*physicalDeviceFeatures*/,
+	const VkPhysicalDeviceProperties2 & /*physicalDeviceProperties*/
+)
 	{
 	// check for needed features
 	if( !this->DescriptorIndexingFeaturesQuery.shaderStorageBufferArrayNonUniformIndexing )
@@ -45,7 +45,7 @@ bool bdr::DescriptorIndexingExtension::SelectDevice(
 	return true;
 	}
 
-status bdr::DescriptorIndexingExtension::CreateDevice( VkDeviceCreateInfo* deviceCreateInfo )
+status bdr::DescriptorIndexingExtension::CreateDevice( VkDeviceCreateInfo *deviceCreateInfo )
 	{
 	InitializeLinkedVulkanStructure( deviceCreateInfo, this->DescriptorIndexingFeaturesCreate, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES );
 

@@ -52,4 +52,5 @@ inline BufferMemoryBarrier::BufferMemoryBarrier(
 	this->bufferMemoryBarrier.size = size;
 	}
 
-};
+}
+// namespace bdr

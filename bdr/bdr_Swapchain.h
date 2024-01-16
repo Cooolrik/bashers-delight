@@ -5,77 +5,79 @@
 
 #include "bdr_Device.h"
 
-namespace bdr 
+namespace bdr
+{
+
+class Swapchain : public DeviceSubmodule
 	{
-	class Swapchain : public DeviceSubmodule
-		{
-		public:
-			~Swapchain();
+	public:
+		~Swapchain();
 
-			class Image
-				{
-				public:
-					VkSemaphore imageAvailableSemaphore;
-					VkFence imageAvailableFence;
-				};
+		class Image
+			{
+			public:
+				VkSemaphore imageAvailableSemaphore;
+				VkFence imageAvailableFence;
+			};
 
-		private:
-			friend status_return<unique_ptr<Swapchain>> Device::CreateObject<Swapchain,SwapchainTemplate>( const SwapchainTemplate &parameters );
-			Swapchain( Device* _module );
-			status Setup( const SwapchainTemplate& parameters );
+	private:
+		friend status_return<unique_ptr<Swapchain>> Device::CreateObject<Swapchain, SwapchainTemplate>( const SwapchainTemplate &parameters );
+		Swapchain( Device *_module );
+		status Setup( const SwapchainTemplate &parameters );
 
-			VkSwapchainKHR SwapchainHandle = nullptr;
-			vector<VkImage> SwapchainImageHandles;
+		VkSwapchainKHR _SwapchainHandle = nullptr;
+		vector<VkImage> SwapchainImageHandles;
 
-			unique_ptr<SwapchainTemplate> Template;
-						
-			//std::vector<VkSemaphore> ImageAvailableSemaphores;
-			//std::vector<VkSemaphore> RenderFinishedSemaphores;
-			//std::vector<VkFence> InFlightFences;
-			//std::vector<VkFence> ImagesInFlight;
-			//uint CurrentFrame = 0;
-			//uint CurrentImage = 0;
+		unique_ptr<SwapchainTemplate> _Template;
 
-		public:
-			
-			// explicitly cleanups the object, and also clears all objects owned by it
-			status Cleanup();
+	public:
+		// properties
 
-			//void RecreateSwapChain( const CreateSwapchainParameters& parameters );
-			
-			// Acquires an image in the swap chain. 
-			// if the return value is status::vulkan_out_of_date_khr, then the swap chain needs to be recreated before using
-			status_return<uint> AcquireNextImage();
+		// the handle of the Swapchain Vulkan object 
+		GetProp<VkSwapchainKHR> SwapchainHandle;
 
-			///// submit command buffers to the current frame
-			//VkResult SubmitRenderCommandBuffersAndPresent( const std::vector<VkCommandBuffer>& buffers );
+		// the template which was used to generate the Swapchain
+		GetProp<SwapchainTemplate, Prop::ptr> Template;
 
-			///// wait for device to idle, for synching, eg shutting down
-			//void WaitForDeviceIdle();
-		};
+	public:
 
-	// Swapchain template creation parameters
-	// Optional values will be handled automatically if not set.
-	class SwapchainTemplate
-		{
-		public:
-			// Number of images in the swap chain. 
-			uint swapchainLength;
+		// explicitly cleanups the object, and also clears all objects owned by it
+		status Cleanup();
 
-			// Selected surface format and color space
-			VkSurfaceFormatKHR surfaceFormat;
+		// recreates the swapchain using the template specified when the object was created, with 
+		// the option to override the render extents before recreating the swapchain
+		status RecreateSwapChain();
+		status RecreateSwapChain( const VkExtent2D &renderExtent );
 
-			// Surface presentation mode. 
-			VkPresentModeKHR presentMode;
+		// Acquire an image in the swap chain. Async, specify a semaphore or fence to signal when the image is available.
+		// if the return status is vulkan_out_of_date_khr, then the swap chain needs to be recreated before using
+		// if the return value is UINT_MAX, the timeout was reached
+		status_return<uint> AcquireNextImage( VkSemaphore semaphore, VkFence fence = nullptr, uint64_t timeout = UINT64_MAX );
+	};
 
-			// Render extents to use 
-			VkExtent2D renderExtent;
+// Swapchain template creation parameters
+// Optional values will be handled automatically if not set.
+class SwapchainTemplate
+	{
+	public:
+		// Number of images in the swap chain. 
+		uint swapchainLength;
 
-			////////////////////////
+		// Selected surface format and color space
+		VkSurfaceFormatKHR surfaceFormat;
 
-			// Creates a swapchain for the current surface of the provided device, and tries to select the best fit from available modes and formats
-			static status_return<SwapchainTemplate> DeviceCompatible( Device *device, VkExtent2D renderExtent = {0,0}, uint swapchainLength = 0 );
+		// Surface presentation mode. 
+		VkPresentModeKHR presentMode;
 
-		};
+		// Render extents to use 
+		VkExtent2D renderExtent;
+
+		////////////////////////
+
+		// Creates a swapchain for the current surface of the provided device, and tries to select the best fit from available modes and formats
+		static status_return<SwapchainTemplate> DeviceCompatible( Device *device, VkExtent2D renderExtent = { 0,0 }, uint swapchainLength = 0 );
 
 	};
+
+}
+//namespace bdr

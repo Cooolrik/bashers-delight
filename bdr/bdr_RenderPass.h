@@ -15,21 +15,25 @@ class RenderPass : public DeviceSubmodule
 		friend status_return<unique_ptr<RenderPass>> Device::CreateObject<RenderPass, RenderPassTemplate>( const RenderPassTemplate &parameters );
 		RenderPass( Device *_module );
 		status Setup( const RenderPassTemplate &parameters );
-
-	private:
-		VkRenderPass RenderPassHandle = nullptr;
-		unique_ptr<RenderPassTemplate> Template;
+		
+		VkRenderPass _RenderPassHandle;
+		unique_ptr<RenderPassTemplate> _Template;
 
 	public:
+		// properties
+
+		// the handle of the RenderPass 
+		GetProp<VkRenderPass> RenderPassHandle;
+
+		// the template which was used to generate the RenderPass
+		GetProp<RenderPassTemplate, Prop::ptr> Template;
+
+	public:
+		// methods
+
 		// explicitly clear the RenderPass data, and release the vulkan handles. 
 		// (note that RenderPasses cannot be re-created after cleanup. Instead, delete and create a new object)
 		status Cleanup();
-
-		// retrieve Vulkan handles
-		VkRenderPass GetRenderPassHandle() const { return this->RenderPassHandle; }
-
-		// retrieve the template used to create the render pass
-		const RenderPassTemplate &GetTemplate() const { return *(this->Template.get()); }
 	};
 
 // template used to create an RenderPass
@@ -64,4 +68,6 @@ class RenderPassTemplate
 		static RenderPassTemplate SingleSubPass( VkFormat colorAttachmentFormat, VkFormat depthAttachmentFormat, VkSampleCountFlagBits samples );
 		static RenderPassTemplate SingleSubPass( const vector<VkFormat> &colorAttachmentFormats, VkFormat depthAttachmentFormat, VkSampleCountFlagBits samples );
 	};
-};
+
+}
+//namespace bdr

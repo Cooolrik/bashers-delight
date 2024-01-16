@@ -193,5 +193,5 @@ inline ImageMemoryBarrier::ImageMemoryBarrier(
 	this->imageMemoryBarrier.subresourceRange.layerCount = layerCount;
 	}
 
-
-};
+}
+//namespace bdr

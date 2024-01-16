@@ -6,6 +6,9 @@
 
 #include "bdr_Helpers.h"
 
+namespace bdr
+{
+
 struct FormatSizes
 	{
 	uint32_t Size;
@@ -243,50 +246,50 @@ static const std::map<VkFormat, FormatSizes> VulkanFormatSizes =
 	{VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM,{6,3}}
 	};
 
-namespace bdr
+
+//uint32_t GetVulkanFormatByteSize( VkFormat format )
+//	{
+//	std::map<VkFormat, FormatSizes>::const_iterator it = VulkanFormatSizes.find( format );
+//	if(it == VulkanFormatSizes.end())
+//		{
+//		throw runtime_error( "Error: Invalid format in GetVulkanFormatByteSize" );
+//		}
+//	return it->second.Size;
+//	}
+//
+//uint32_t GetVulkanFormatChannelCount( VkFormat format )
+//	{
+//	std::map<VkFormat, FormatSizes>::const_iterator it = VulkanFormatSizes.find( format );
+//	if(it == VulkanFormatSizes.end())
+//		{
+//		throw runtime_error( "Error: Invalid format in GetVulkanFormatChannelCount" );
+//		}
+//	return it->second.Channels;
+//	}
+
+bool HasVulkanFormatDepth( VkFormat format )
 	{
-	//uint32_t GetVulkanFormatByteSize( VkFormat format )
-	//	{
-	//	std::map<VkFormat, FormatSizes>::const_iterator it = VulkanFormatSizes.find( format );
-	//	if(it == VulkanFormatSizes.end())
-	//		{
-	//		throw runtime_error( "Error: Invalid format in GetVulkanFormatByteSize" );
-	//		}
-	//	return it->second.Size;
-	//	}
-	//
-	//uint32_t GetVulkanFormatChannelCount( VkFormat format )
-	//	{
-	//	std::map<VkFormat, FormatSizes>::const_iterator it = VulkanFormatSizes.find( format );
-	//	if(it == VulkanFormatSizes.end())
-	//		{
-	//		throw runtime_error( "Error: Invalid format in GetVulkanFormatChannelCount" );
-	//		}
-	//	return it->second.Channels;
-	//	}
-		
-	bool HasVulkanFormatDepth( VkFormat format )
+	static const std::unordered_set<VkFormat> formats =
 		{
-		static const std::unordered_set<VkFormat> formats =
-			{
-			VK_FORMAT_D32_SFLOAT,
-			VK_FORMAT_D32_SFLOAT_S8_UINT,
-			VK_FORMAT_D24_UNORM_S8_UINT
-			};
-		return formats.find( format ) != formats.end();
-		}
-
-	bool HasVulkanFormatStencil( VkFormat format )
-		{
-		static const std::unordered_set<VkFormat> formats =
-			{
-			VK_FORMAT_D32_SFLOAT_S8_UINT,
-			VK_FORMAT_D24_UNORM_S8_UINT
-			};
-		return formats.find( format ) != formats.end();
-		}
-
+		VK_FORMAT_D32_SFLOAT,
+		VK_FORMAT_D32_SFLOAT_S8_UINT,
+		VK_FORMAT_D24_UNORM_S8_UINT
+		};
+	return formats.find( format ) != formats.end();
 	}
+
+bool HasVulkanFormatStencil( VkFormat format )
+	{
+	static const std::unordered_set<VkFormat> formats =
+		{
+		VK_FORMAT_D32_SFLOAT_S8_UINT,
+		VK_FORMAT_D24_UNORM_S8_UINT
+		};
+	return formats.find( format ) != formats.end();
+	}
+
+}
+// namespace bdr
 
 
 

@@ -13,9 +13,8 @@
 namespace bdr
 {
 
-Image::Image( Device* _module ) : DeviceSubmodule( _module ) 
-	{
-	}
+Image::Image( Device *_module ) : DeviceSubmodule( _module )
+	{}
 
 Image::~Image()
 	{
@@ -62,18 +61,18 @@ status Image::Setup( const ImageTemplate &parameters )
 		}
 	else if( parameters.layoutTransition.has_value() )
 		{
-		Validate( parameters.commandPool , status::invalid_param ) << "Applying layoutTransition requires the commandPool object to be valid." << ValidateEnd;
-		
+		Validate( parameters.commandPool, status::invalid_param ) << "Applying layoutTransition requires the commandPool object to be valid." << ValidateEnd;
+
 		const auto &layoutTransition = parameters.layoutTransition.value();
 
 		// not dependent on anything upstream (VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT), defined what is dependent downstream (destPipelineStage)
 		CheckCall( this->TransitionImageLayout(
 			parameters.commandPool,
 			layoutTransition.imageMemoryBarrier,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 			layoutTransition.destPipelineStage
 		) );
-		
+
 		}
 
 	return status::ok;
@@ -234,7 +233,7 @@ status Image::TransitionImageLayout(
 	// apply the dest image memory barrier
 	commandBuffer->AddImageMemoryBarrier( imageMemoryBarrier, this );
 	commandBuffer->PipelineBarrier( srcStageMask, destStageMask );
-	
+
 	// run the buffer, wait for it to finish
 	CheckCall( commandPool->EndCommandBuffer( commandBuffer ) );
 	CheckCall( commandPool->SubmitCommandBuffer( commandBuffer, true ) );
@@ -499,7 +498,7 @@ ImageTemplate ImageTemplate::Texture( VkImageType imageType, VkImageViewType ima
 	// fill in image create info
 	ret.imageCreateInfo = {};
 	ret.imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	ret.imageCreateInfo.flags = 0; 
+	ret.imageCreateInfo.flags = 0;
 	ret.imageCreateInfo.imageType = imageType;
 	ret.imageCreateInfo.format = format;
 	ret.imageCreateInfo.extent.width = width;
@@ -512,7 +511,7 @@ ImageTemplate ImageTemplate::Texture( VkImageType imageType, VkImageViewType ima
 	ret.imageCreateInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	ret.imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	ret.imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	
+
 	// fill in image view create info
 	ret.imageViewCreateInfo = {};
 	ret.imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -557,7 +556,7 @@ ImageTemplate ImageTemplate::Texture( VkImageType imageType, VkImageViewType ima
 	layoutTransition.imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	layoutTransition.imageMemoryBarrier.subresourceRange.layerCount = arrayLayers;
 	layoutTransition.imageMemoryBarrier.subresourceRange.levelCount = mipmapLevels;
-	
+
 	return ret;
 	}
 
@@ -625,10 +624,10 @@ static ImageTemplate AttachmentCommonTemplate( VkFormat format, uint32_t width, 
 
 	ret.allocationCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	ret.allocationCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-	
+
 	ret.layoutTransition.set();
 	auto &layoutTransition = ret.layoutTransition.value();
-	
+
 	layoutTransition.imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	layoutTransition.imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	layoutTransition.imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -647,7 +646,7 @@ static ImageTemplate AttachmentCommonTemplate( VkFormat format, uint32_t width, 
 
 ImageTemplate ImageTemplate::ColorAttachment( VkFormat format, uint32_t width, uint32_t height, CommandPool *commandPool, VkSampleCountFlagBits samples )
 	{
-	SanityCheck( !HasVulkanFormatDepth(format) );
+	SanityCheck( !HasVulkanFormatDepth( format ) );
 
 	ImageTemplate ret = AttachmentCommonTemplate( format, width, height, commandPool, samples );
 
@@ -667,8 +666,8 @@ ImageTemplate ImageTemplate::ColorAttachment( VkFormat format, uint32_t width, u
 
 ImageTemplate ImageTemplate::DepthAttachment( VkFormat format, uint32_t width, uint32_t height, CommandPool *commandPool, VkSampleCountFlagBits samples )
 	{
-	SanityCheck( HasVulkanFormatDepth(format) );
-	const bool depthFormatHasStencil = HasVulkanFormatStencil(format);
+	SanityCheck( HasVulkanFormatDepth( format ) );
+	const bool depthFormatHasStencil = HasVulkanFormatStencil( format );
 
 	ImageTemplate ret = AttachmentCommonTemplate( format, width, height, commandPool, samples );
 
@@ -690,4 +689,5 @@ ImageTemplate ImageTemplate::DepthAttachment( VkFormat format, uint32_t width, u
 	return ret;
 	}
 
-};
+}
+//namespace bdr

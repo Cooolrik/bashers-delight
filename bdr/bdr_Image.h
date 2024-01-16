@@ -173,4 +173,6 @@ class ImageTemplate
 		static ImageTemplate ColorAttachment( VkFormat format, uint32_t width, uint32_t height, CommandPool *commandPool, VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT );
 		static ImageTemplate DepthAttachment( VkFormat format, uint32_t width, uint32_t height, CommandPool *commandPool, VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT );
 	};
-};
+
+}
+//namespace bdr

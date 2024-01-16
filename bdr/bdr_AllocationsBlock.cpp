@@ -8,52 +8,53 @@
 
 namespace bdr
 {
-	AllocationsBlock::AllocationsBlock( Device* _module ) : DeviceSubmodule(_module) , CommandPools(_module) , Swapchains(_module)
-		{
-		LogThis;
-		}
 
-	AllocationsBlock::~AllocationsBlock()
-		{
-		LogThis;
+AllocationsBlock::AllocationsBlock( Device *_module ) : DeviceSubmodule( _module ), CommandPools( _module ), Swapchains( _module )
+	{
+	LogThis;
+	}
 
-		this->Cleanup();
-		}
+AllocationsBlock::~AllocationsBlock()
+	{
+	LogThis;
 
-	status AllocationsBlock::Setup( const AllocationsBlockTemplate &/*parameters*/ )
-		{
-		return status_code::ok;
-		}
+	this->Cleanup();
+	}
 
-	status AllocationsBlock::Cleanup()
-		{
-		this->CommandPools.Cleanup();
-		this->Swapchains.Cleanup();
+status AllocationsBlock::Setup( const AllocationsBlockTemplate &/*parameters*/ )
+	{
+	return status_code::ok;
+	}
 
-		return status_code::ok;
-		}
+status AllocationsBlock::Cleanup()
+	{
+	this->CommandPools.Cleanup();
+	this->Swapchains.Cleanup();
 
-	status_return<Swapchain*> AllocationsBlock::CreateSwapchain( const SwapchainTemplate& parameters )
-		{
-		return this->Swapchains.Create( parameters );
-		}
+	return status_code::ok;
+	}
 
-	status AllocationsBlock::DestroySwapchain( Swapchain *swapchain )
-		{
-		CheckCall( this->Swapchains.Destroy( swapchain ) );
-		return status::ok;
-		}
+status_return<Swapchain *> AllocationsBlock::CreateSwapchain( const SwapchainTemplate &parameters )
+	{
+	return this->Swapchains.Create( parameters );
+	}
 
-	status_return<CommandPool*> AllocationsBlock::CreateCommandPool( const CommandPoolTemplate& parameters )
-		{
-		return this->CommandPools.Create( parameters );
-		}
+status AllocationsBlock::DestroySwapchain( Swapchain *swapchain )
+	{
+	CheckCall( this->Swapchains.Destroy( swapchain ) );
+	return status::ok;
+	}
 
-	status AllocationsBlock::DestroyCommandPool( CommandPool *commandPool )
-		{
-		CheckCall( this->CommandPools.Destroy( commandPool ) );
-		return status::ok;
-		}
+status_return<CommandPool *> AllocationsBlock::CreateCommandPool( const CommandPoolTemplate &parameters )
+	{
+	return this->CommandPools.Create( parameters );
+	}
 
+status AllocationsBlock::DestroyCommandPool( CommandPool *commandPool )
+	{
+	CheckCall( this->CommandPools.Destroy( commandPool ) );
+	return status::ok;
+	}
 
 }
+// namespace bdr

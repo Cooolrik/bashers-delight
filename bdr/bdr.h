@@ -43,6 +43,7 @@
 #include <ctle/status_return.h>
 #include <ctle/status.h>
 #include <ctle/optional_value.h>
+#include <ctle/prop.h>
 
 // re-enable warnings 
 #if defined(_MSC_VER)
@@ -69,7 +70,13 @@ namespace bdr
 	using status = ctle::status;
 	template<class _Ty> using status_return = ctle::status_return<ctle::status,_Ty>;
 
-	// list all classes 
+	// property templates
+	using Prop = ctle::prop;
+	template<class _Ty, Prop::type _type=Prop::value> using GetProp = ctle::prop_get<_Ty, _type>;
+	template<class _Ty, Prop::type _type=Prop::value> using GetSetProp = ctle::prop_get_set<_Ty, _type>;
+	template<class _Ty, Prop::type _type=Prop::value> using SetProp = ctle::prop_set<_Ty, _type>;
+
+	// fwd declares 
 	class Instance;
 	class InstanceTemplate;
 	class Device;
@@ -213,6 +220,7 @@ namespace bdr
 		{
 		return std::min( std::max( value , minvalue ) , maxvalue );
 		}
+
 }
 
 

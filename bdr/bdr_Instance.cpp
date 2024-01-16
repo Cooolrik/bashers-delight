@@ -11,503 +11,504 @@
 #include "extensions/ray_tracing/bdr_RayTracingExtension.h"
 
 namespace bdr
+{
+
+// needed validation layers
+static const vector<const char *> ValidationLayers =
 	{
-	// needed validation layers
-	static const vector<const char*> ValidationLayers =
-		{
-		"VK_LAYER_KHRONOS_validation"
-		};
+	"VK_LAYER_KHRONOS_validation"
+	};
 
-	// checks that we have all needed validation layers available 
-	static status haveAllValidationLayers()
-		{
-		// get the list of global layers
-		uint layerCount = {};
-		CheckCall( vkEnumerateInstanceLayerProperties( &layerCount, nullptr ) );
-		vector<VkLayerProperties> vulkanLayers( layerCount );
-		CheckCall( vkEnumerateInstanceLayerProperties( &layerCount, vulkanLayers.data() ) );
+// checks that we have all needed validation layers available 
+static status haveAllValidationLayers()
+	{
+	// get the list of global layers
+	uint layerCount = {};
+	CheckCall( vkEnumerateInstanceLayerProperties( &layerCount, nullptr ) );
+	vector<VkLayerProperties> vulkanLayers( layerCount );
+	CheckCall( vkEnumerateInstanceLayerProperties( &layerCount, vulkanLayers.data() ) );
 
-		// make sure all selected validation layers exists
-		for( const char* layerName : ValidationLayers )
+	// make sure all selected validation layers exists
+	for( const char *layerName : ValidationLayers )
+		{
+		bool layerFound = false;
+		for( const VkLayerProperties &layerProperties : vulkanLayers )
 			{
-			bool layerFound = false;
-			for( const VkLayerProperties& layerProperties : vulkanLayers )
+			if( stricmp( layerProperties.layerName, layerName ) == 0 )
 				{
-				if( stricmp( layerProperties.layerName, layerName ) == 0 )
-					{
-					layerFound = true;
-					break;
-					}
-				}
-			if( !layerFound )
-				{
-				// failed to find this one, so fail
-				return status_code::not_found;
-				}
-			}
-
-		// all validation layers found. success
-		return status_code::ok;
-		}
-
-	inline VkResult _vkCreateDebugUtilsMessengerEXT( VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger )
-		{
-		PFN_vkCreateDebugUtilsMessengerEXT func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr( instance, "vkCreateDebugUtilsMessengerEXT" );
-		if( func == nullptr )
-			{
-			return VK_ERROR_EXTENSION_NOT_PRESENT;
-			}
-		return func( instance, pCreateInfo, pAllocator, pDebugMessenger );
-		}
-
-	inline void _vkDestroyDebugUtilsMessengerEXT( VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator )
-		{
-		PFN_vkDestroyDebugUtilsMessengerEXT func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr( instance, "vkDestroyDebugUtilsMessengerEXT" );
-		if( func != nullptr )
-			{
-			func( instance, debugMessenger, pAllocator );
-			}
-		}
-
-	Instance::Instance()
-		{
-		LogThis;
-		}
-
-	Instance::~Instance()
-		{
-		LogThis;
-		
-		this->Cleanup();
-		}
-
-	status Instance::Cleanup()
-		{
-		// call cleanup on extensions before deallocation
-		// so any needed cleanup code has access to the device and other extensions
-		for( auto &ext : this->EnabledExtensions )
-			{
-			CheckCall( ext->Cleanup() );
-			}
-		this->EnabledExtensions.clear();
-
-		CheckCall( Release( this->Device_ ) );
-
-		CheckCall( Release( this->DescriptorIndexingExtension_ ) );
-		CheckCall( Release( this->BufferDeviceAddressExtension_ ) );
-		CheckCall( Release( this->RayTracingExtension_ ) );
-
-		SafeVkDestroy( DebugUtilsMessenger , _vkDestroyDebugUtilsMessengerEXT( this->InstanceHandle, this->DebugUtilsMessenger, nullptr ) );
-		SafeVkDestroy( InstanceHandle , vkDestroyInstance( this->InstanceHandle, nullptr ) );
-
-		return status_code::ok;
-		}
-
-
-	static status_return<bool> lookupPhysicalDeviceQueueFamilies( 
-		VkSurfaceKHR surfaceHandle ,
-		VkPhysicalDevice physicalDeviceHandle , 
-		uint &physicalDeviceQueueGraphicsFamily , 
-		uint &physicalDeviceQueuePresentFamily )
-		{
-		int graphicsFamilyIndex = -1;
-		int presentFamilyIndex = -1;
-
-		// retrieve the list of the families
-		uint queueFamilyCount = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties( physicalDeviceHandle, &queueFamilyCount, nullptr );
-		vector<VkQueueFamilyProperties> queueFamilies( queueFamilyCount );
-		vkGetPhysicalDeviceQueueFamilyProperties( physicalDeviceHandle, &queueFamilyCount, queueFamilies.data() );
-
-		for( uint i = 0; i < queueFamilyCount; ++i )
-			{
-			if( queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT )
-				{
-				graphicsFamilyIndex = (int)i;
-				}
-
-			VkBool32 presentSupport = false;
-			CheckCall( vkGetPhysicalDeviceSurfaceSupportKHR( physicalDeviceHandle, i, surfaceHandle, &presentSupport ) );
-			if( presentSupport )
-				{
-				presentFamilyIndex = (int)i;
-				}
-
-			// early exit if we have found queue families
-			if( graphicsFamilyIndex >= 0 &&
-				presentFamilyIndex >= 0 )
-				{
+				layerFound = true;
 				break;
 				}
 			}
+		if( !layerFound )
+			{
+			// failed to find this one, so fail
+			return status_code::not_found;
+			}
+		}
 
+	// all validation layers found. success
+	return status_code::ok;
+	}
+
+inline VkResult _vkCreateDebugUtilsMessengerEXT( VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pDebugMessenger )
+	{
+	PFN_vkCreateDebugUtilsMessengerEXT func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr( instance, "vkCreateDebugUtilsMessengerEXT" );
+	if( func == nullptr )
+		{
+		return VK_ERROR_EXTENSION_NOT_PRESENT;
+		}
+	return func( instance, pCreateInfo, pAllocator, pDebugMessenger );
+	}
+
+inline void _vkDestroyDebugUtilsMessengerEXT( VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks *pAllocator )
+	{
+	PFN_vkDestroyDebugUtilsMessengerEXT func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr( instance, "vkDestroyDebugUtilsMessengerEXT" );
+	if( func != nullptr )
+		{
+		func( instance, debugMessenger, pAllocator );
+		}
+	}
+
+Instance::Instance()
+	{
+	LogThis;
+	}
+
+Instance::~Instance()
+	{
+	LogThis;
+
+	this->Cleanup();
+	}
+
+status Instance::Cleanup()
+	{
+	// call cleanup on extensions before deallocation
+	// so any needed cleanup code has access to the device and other extensions
+	for( auto &ext : this->EnabledExtensions )
+		{
+		CheckCall( ext->Cleanup() );
+		}
+	this->EnabledExtensions.clear();
+
+	CheckCall( Release( this->Device_ ) );
+
+	CheckCall( Release( this->DescriptorIndexingExtension_ ) );
+	CheckCall( Release( this->BufferDeviceAddressExtension_ ) );
+	CheckCall( Release( this->RayTracingExtension_ ) );
+
+	SafeVkDestroy( DebugUtilsMessenger, _vkDestroyDebugUtilsMessengerEXT( this->InstanceHandle, this->DebugUtilsMessenger, nullptr ) );
+	SafeVkDestroy( InstanceHandle, vkDestroyInstance( this->InstanceHandle, nullptr ) );
+
+	return status_code::ok;
+	}
+
+
+static status_return<bool> lookupPhysicalDeviceQueueFamilies(
+	VkSurfaceKHR surfaceHandle,
+	VkPhysicalDevice physicalDeviceHandle,
+	uint &physicalDeviceQueueGraphicsFamily,
+	uint &physicalDeviceQueuePresentFamily )
+	{
+	int graphicsFamilyIndex = -1;
+	int presentFamilyIndex = -1;
+
+	// retrieve the list of the families
+	uint queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties( physicalDeviceHandle, &queueFamilyCount, nullptr );
+	vector<VkQueueFamilyProperties> queueFamilies( queueFamilyCount );
+	vkGetPhysicalDeviceQueueFamilyProperties( physicalDeviceHandle, &queueFamilyCount, queueFamilies.data() );
+
+	for( uint i = 0; i < queueFamilyCount; ++i )
+		{
+		if( queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT )
+			{
+			graphicsFamilyIndex = (int)i;
+			}
+
+		VkBool32 presentSupport = false;
+		CheckCall( vkGetPhysicalDeviceSurfaceSupportKHR( physicalDeviceHandle, i, surfaceHandle, &presentSupport ) );
+		if( presentSupport )
+			{
+			presentFamilyIndex = (int)i;
+			}
+
+		// early exit if we have found queue families
 		if( graphicsFamilyIndex >= 0 &&
 			presentFamilyIndex >= 0 )
 			{
-			physicalDeviceQueueGraphicsFamily = (uint)graphicsFamilyIndex;
-			physicalDeviceQueuePresentFamily = (uint)presentFamilyIndex;
-			return true;
+			break;
 			}
-		else
+		}
+
+	if( graphicsFamilyIndex >= 0 &&
+		presentFamilyIndex >= 0 )
+		{
+		physicalDeviceQueueGraphicsFamily = (uint)graphicsFamilyIndex;
+		physicalDeviceQueuePresentFamily = (uint)presentFamilyIndex;
+		return true;
+		}
+	else
+		{
+		return false;
+		}
+	}
+
+static status_return<bool> validatePhysicalDeviceRequiredExtensionsSupported(
+	VkPhysicalDevice physicalDeviceHandle,
+	std::vector<const char *> &deviceExtensionList )
+	{
+	// list extensions
+	uint extensionCount = 0;
+	CheckCall( vkEnumerateDeviceExtensionProperties( physicalDeviceHandle, nullptr, &extensionCount, nullptr ) );
+
+	vector<VkExtensionProperties> availableExtensions( extensionCount );
+	CheckCall( vkEnumerateDeviceExtensionProperties( physicalDeviceHandle, nullptr, &extensionCount, availableExtensions.data() ) );
+
+	// make sure all required extensions are supported
+	for( auto ext : deviceExtensionList )
+		{
+		bool found = false;
+		for( auto &avail_ext : availableExtensions )
+			{
+			if( strcmp( avail_ext.extensionName, ext ) == 0 )
+				{
+				found = true;
+				break;
+				}
+			}
+		if( !found )
 			{
 			return false;
 			}
 		}
 
-	static status_return<bool> validatePhysicalDeviceRequiredExtensionsSupported(
-		VkPhysicalDevice physicalDeviceHandle , 
-		std::vector<const char*> &deviceExtensionList )
+	// all extensions found
+	return true;
+	}
+
+status_return<unique_ptr<Instance>> Instance::Create( const InstanceTemplate &parameters )
+	{
+	LogInfo << "Creating bdr Instance" << LogEnd;
+
+	auto pThis = std::unique_ptr<Instance>( new Instance() );
+
+	pThis->EnableValidation = parameters.EnableValidation;
+
+	// make sure all validation layers exist
+	if( pThis->EnableValidation )
 		{
-		// list extensions
-		uint extensionCount = 0;
-		CheckCall( vkEnumerateDeviceExtensionProperties( physicalDeviceHandle, nullptr, &extensionCount, nullptr ) );
-
-		vector<VkExtensionProperties> availableExtensions( extensionCount );
-		CheckCall( vkEnumerateDeviceExtensionProperties( physicalDeviceHandle, nullptr, &extensionCount, availableExtensions.data() ) );
-
-		// make sure all required extensions are supported
-		for( auto ext : deviceExtensionList )
-			{
-			bool found = false;
-			for( auto &avail_ext : availableExtensions )
-				{
-				if( strcmp( avail_ext.extensionName, ext ) == 0 )
-					{
-					found = true;
-					break;
-					}
-				}
-			if( !found )
-				{
-				return false;
-				}
-			}
-
-		// all extensions found
-		return true;
+		LogDebug << "Enabling validation." << LogEnd;
+		CheckCall( haveAllValidationLayers() );
 		}
 
-	status_return<unique_ptr<Instance>> Instance::Create( const InstanceTemplate& parameters )
+	// application information, engine version 0.1
+	VkApplicationInfo applicationInfo{};
+	applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	applicationInfo.pApplicationName = parameters.ApplicationName.c_str();
+	applicationInfo.applicationVersion = parameters.ApplicationVersion;
+	applicationInfo.pEngineName = "VulkanInstance";
+	applicationInfo.engineVersion = VK_MAKE_VERSION( 0, 1, 0 );
+	applicationInfo.apiVersion = VK_API_VERSION_1_3;
+
+	// instance creation info
+	VkInstanceCreateInfo instanceCreateInfo{};
+	instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	instanceCreateInfo.pApplicationInfo = &applicationInfo;
+
+	// setup list of needed extensions from calling app
+	for( uint i = 0; i < parameters.NeededExtensionsCount; ++i )
 		{
-		LogInfo << "Creating bdr Instance" << LogEnd;
-
-		auto pThis = std::unique_ptr<Instance>( new Instance() );
-
-		pThis->EnableValidation = parameters.EnableValidation;
-
-		// make sure all validation layers exist
-		if( pThis->EnableValidation ) 
-			{
-			LogDebug << "Enabling validation." << LogEnd;
-			CheckCall( haveAllValidationLayers() );
-			}
-
-		// application information, engine version 0.1
-		VkApplicationInfo applicationInfo{};
-		applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		applicationInfo.pApplicationName = parameters.ApplicationName.c_str();
-		applicationInfo.applicationVersion = parameters.ApplicationVersion;
-		applicationInfo.pEngineName = "VulkanInstance";
-		applicationInfo.engineVersion = VK_MAKE_VERSION( 0, 1, 0 );
-		applicationInfo.apiVersion = VK_API_VERSION_1_3;
-
-		// instance creation info
-		VkInstanceCreateInfo instanceCreateInfo{};
-		instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-		instanceCreateInfo.pApplicationInfo = &applicationInfo;
-
-		// setup list of needed extensions from calling app
-		for( uint i = 0; i < parameters.NeededExtensionsCount; ++i )
-			{
-			LogDebug << "Adding needed extension: " << parameters.NeededExtensions[i] << LogEnd;
-			pThis->ExtensionList.push_back( parameters.NeededExtensions[i] );
-			}
-
-		// enable additional extensions
-		if( parameters.EnableDescriptorIndexingExtension )
-			{
-			pThis->BufferDeviceAddressExtension_ = unique_ptr<bdr::BufferDeviceAddressExtension>( new bdr::BufferDeviceAddressExtension(pThis.get()) );
-			pThis->EnabledExtensions.push_back( pThis->BufferDeviceAddressExtension_.get() );
-			}
-		if( parameters.EnableDescriptorIndexingExtension )
-			{
-			pThis->DescriptorIndexingExtension_ = unique_ptr<bdr::DescriptorIndexingExtension>( new bdr::DescriptorIndexingExtension(pThis.get()) );
-			pThis->EnabledExtensions.push_back( pThis->DescriptorIndexingExtension_.get() );
-			}
-		if( parameters.EnableRayTracingExtension )
-			{
-			pThis->RayTracingExtension_ = unique_ptr<bdr::RayTracingExtension>( new bdr::RayTracingExtension(pThis.get()) );
-			pThis->EnabledExtensions.push_back( pThis->RayTracingExtension_.get() );
-			}
-
-		// call all enabled extensions pre-create instance
-		for( auto ext : pThis->EnabledExtensions )
-			{
-			CheckCall( ext->CreateInstance(  &instanceCreateInfo, &pThis->ExtensionList ) );
-			}
-
-		// setup vulkan validation extension if wanted
-		VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfo{};
-		if( pThis->EnableValidation )
-			{
-			LogDebug << "Adding debugging utils extension: " VK_EXT_DEBUG_UTILS_EXTENSION_NAME << LogEnd;
-
-			// add to extensions to enable
-			pThis->ExtensionList.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
-
-			// add the validation layers
-			instanceCreateInfo.enabledLayerCount = static_cast<uint>( ValidationLayers.size() );
-			instanceCreateInfo.ppEnabledLayerNames = ValidationLayers.data();
-
-			// insert create info into create list
-			debugUtilsMessengerCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-			debugUtilsMessengerCreateInfo.messageSeverity = parameters.DebugMessageSeverityMask;
-			debugUtilsMessengerCreateInfo.messageType = parameters.DebugMessageTypeMask;
-			debugUtilsMessengerCreateInfo.pfnUserCallback = parameters.DebugMessageCallback;
-			debugUtilsMessengerCreateInfo.pNext = instanceCreateInfo.pNext;
-			instanceCreateInfo.pNext = &debugUtilsMessengerCreateInfo;
-			}
-
-		// create instance
-		instanceCreateInfo.enabledExtensionCount = static_cast<uint>( pThis->ExtensionList.size() );
-		instanceCreateInfo.ppEnabledExtensionNames = pThis->ExtensionList.data();
-		CheckCall( vkCreateInstance( &instanceCreateInfo, nullptr, &pThis->InstanceHandle ) );
-
-		// create debug messager
-		if( pThis->EnableValidation )
-			{
-			LogDebug << "Creating debug messenger" << LogEnd;
-			CheckCall( _vkCreateDebugUtilsMessengerEXT( pThis->InstanceHandle, &debugUtilsMessengerCreateInfo, nullptr, &pThis->DebugUtilsMessenger ) );
-			}
-
-		// call enabled extensions post-create
-		for( auto ext : pThis->EnabledExtensions )
-			{
-			CheckCall( ext->PostCreateInstance() );
-			}
-
-		return pThis;
-		}
-	
-	status_return<Device*> Instance::CreateDevice( const DeviceTemplate& parameters )
-		{
-		Validate( !this->Device_ , status_code::already_initialized ) << "The Device object is already created" << ValidateEnd;
-		Validate( parameters.SurfaceHandle , status_code::invalid_param ) << "No SurfaceHandle specified" << ValidateEnd;
-		
-		// create a device object 
-		auto pDevice = unique_ptr<bdr::Device>( new bdr::Device(this) );
-
-		// copy the surface 
-		pDevice->SurfaceHandle = parameters.SurfaceHandle;
-
-		// retrieve all devices we can select from
-		uint deviceCount = 0;
-		CheckCall( vkEnumeratePhysicalDevices( this->InstanceHandle, &deviceCount, nullptr ) );
-		Validate( deviceCount > 0 , status_code::not_found ) << "Could not find any device which has support for Vulkan" << ValidateEnd;
-		vector<VkPhysicalDevice> devices( deviceCount );
-		CheckCall( vkEnumeratePhysicalDevices( this->InstanceHandle, &deviceCount, devices.data() ) );
-
-		// fill in required extensions list, along with features and properties
-		pDevice->PhysicalDeviceFeatures = {};
-		pDevice->PhysicalDeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-		pDevice->PhysicalDeviceProperties = {};
-		pDevice->PhysicalDeviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-		pDevice->DeviceExtensionList.clear();
-		pDevice->DeviceExtensionList.push_back( VK_KHR_SWAPCHAIN_EXTENSION_NAME );
-		for( auto ext : this->EnabledExtensions )
-			{
-			CheckCall( ext->AddRequiredDeviceExtensions( 
-				&pDevice->PhysicalDeviceFeatures,
-				&pDevice->PhysicalDeviceProperties,
-				&pDevice->DeviceExtensionList 
-				) );
-			}
-
-		// enumerate and look for a suitable device
-		bool found_device = false;
-		for( const auto& device : devices )
-			{
-			// try this physical device
-			pDevice->PhysicalDeviceHandle = device;
-
-			// check if it has the queue families needed
-			CheckRetValCall( 
-				foundPhysicalDeviceQueueFamilies , 
-				lookupPhysicalDeviceQueueFamilies( 
-					pDevice->SurfaceHandle ,
-					pDevice->PhysicalDeviceHandle , 
-					pDevice->PhysicalDeviceQueueGraphicsFamily , 
-					pDevice->PhysicalDeviceQueuePresentFamily 
-					) 
-				);
-			if( !foundPhysicalDeviceQueueFamilies )
-				continue;
-
-			// make sure all extensions are supported
-			CheckRetValCall( 
-				allRequiredDeviceExtensionsAreSupported ,
-				validatePhysicalDeviceRequiredExtensionsSupported(
-					pDevice->PhysicalDeviceHandle , 
-					pDevice->DeviceExtensionList 
-					)
-				);
-			if( !allRequiredDeviceExtensionsAreSupported )
-				continue;
-			
-			// query capabilities and formats available
-			uint count = 0;
-			CheckCall( vkGetPhysicalDeviceSurfaceCapabilitiesKHR( device, pDevice->SurfaceHandle, &pDevice->SurfaceCapabilities ) );
-			CheckCall( vkGetPhysicalDeviceSurfaceFormatsKHR( device, pDevice->SurfaceHandle, &count, nullptr ) );
-			if( count > 0 )
-				{
-				pDevice->AvailableSurfaceFormats.resize( count );
-				CheckCall( vkGetPhysicalDeviceSurfaceFormatsKHR( device, pDevice->SurfaceHandle, &count, pDevice->AvailableSurfaceFormats.data() ) );
-				}
-			vkGetPhysicalDeviceSurfacePresentModesKHR( device, pDevice->SurfaceHandle, &count, nullptr );
-			if( count > 0 )
-				{
-				pDevice->AvailablePresentModes.resize( count );
-				CheckCall( vkGetPhysicalDeviceSurfacePresentModesKHR( device, pDevice->SurfaceHandle, &count, pDevice->AvailablePresentModes.data() ) );
-				}
-
-			// need at least one format and mode, so skip device if not available
-			if( pDevice->AvailableSurfaceFormats.empty() 
-			 || pDevice->AvailablePresentModes.empty() )
-				continue;
-
-			// query device features as well
-			vkGetPhysicalDeviceFeatures2( device, &pDevice->PhysicalDeviceFeatures );
-			vkGetPhysicalDeviceProperties2( device, &pDevice->PhysicalDeviceProperties );
-
-			// need these features
-			if( !pDevice->PhysicalDeviceFeatures.features.samplerAnisotropy )
-				continue;
-			if( !pDevice->PhysicalDeviceFeatures.features.multiDrawIndirect )
-				continue;
-
-			// call enabled extensions to make sure they are supported
-			bool passed_all_extensions = true;
-			for( auto ext : this->EnabledExtensions )
-				{
-				if( !ext->SelectDevice( 
-					pDevice->SurfaceCapabilities, 
-					pDevice->AvailableSurfaceFormats, 
-					pDevice->AvailablePresentModes, 
-					pDevice->PhysicalDeviceFeatures, 
-					pDevice->PhysicalDeviceProperties ) )
-					{
-					passed_all_extensions = false;
-					break;
-					}
-				}
-			if( !passed_all_extensions )
-				continue;
-
-			// all checks out, we found a device
-			found_device = true;
-			break;
-			}
-
-		// make sure we have found a device now
-		Validate( found_device , status_code::not_found ) << "No suitable physical device found." << ValidateEnd;
-
-		// setup device queues
-		vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos( 1 );
-		float queuePriority = 1.0f;
-		deviceQueueCreateInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		deviceQueueCreateInfos[0].queueFamilyIndex = pDevice->PhysicalDeviceQueueGraphicsFamily;
-		deviceQueueCreateInfos[0].queueCount = 1;
-		deviceQueueCreateInfos[0].pQueuePriorities = &queuePriority;
-		if( pDevice->PhysicalDeviceQueueGraphicsFamily != pDevice->PhysicalDeviceQueuePresentFamily )
-			{
-			// need and additional queue, as presentation and graphics are separate families
-			deviceQueueCreateInfos.resize( 2 );
-			deviceQueueCreateInfos[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			deviceQueueCreateInfos[1].queueFamilyIndex = pDevice->PhysicalDeviceQueuePresentFamily;
-			deviceQueueCreateInfos[1].queueCount = 1;
-			deviceQueueCreateInfos[1].pQueuePriorities = &queuePriority;
-			}
-
-		// additional features
-		VkPhysicalDeviceFeatures physicalDeviceFeatures{};
-		physicalDeviceFeatures.samplerAnisotropy = VK_TRUE;
-		physicalDeviceFeatures.multiDrawIndirect = VK_TRUE;
-
-		// device setup and creation + queues
-		VkDeviceCreateInfo deviceCreateInfo{};
-		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>( deviceQueueCreateInfos.size() );
-		deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfos.data();
-		deviceCreateInfo.pEnabledFeatures = &physicalDeviceFeatures;
-		deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>( pDevice->DeviceExtensionList.size() );
-		deviceCreateInfo.ppEnabledExtensionNames = pDevice->DeviceExtensionList.data();
-	
-		// add creation for extensions
-		for( auto ext : this->EnabledExtensions )
-			{
-			CheckCall( ext->CreateDevice( &deviceCreateInfo ) );
-			}
-		if( this->EnableValidation )
-			{
-			deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>( ValidationLayers.size() );
-			deviceCreateInfo.ppEnabledLayerNames = ValidationLayers.data();
-			}
-		else
-			{
-			deviceCreateInfo.enabledLayerCount = 0;
-			}
-
-		CheckCall( vkCreateDevice( pDevice->PhysicalDeviceHandle, &deviceCreateInfo, nullptr, &pDevice->DeviceHandle ) );
-		vkGetDeviceQueue( pDevice->DeviceHandle, pDevice->PhysicalDeviceQueueGraphicsFamily, 0, &pDevice->GraphicsQueueHandle );
-		vkGetDeviceQueue( pDevice->DeviceHandle, pDevice->PhysicalDeviceQueuePresentFamily, 0, &pDevice->PresentQueueHandle );
-
-		// post create call extensions
-		for( auto ext : this->EnabledExtensions )
-			{
-			CheckCall( ext->PostCreateDevice() );
-			}
-
-		// set up the memory allocator in the device
-		VmaAllocatorCreateInfo allocatorInfo = {};
-		allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_3;
-		allocatorInfo.physicalDevice = pDevice->PhysicalDeviceHandle;
-		allocatorInfo.device = pDevice->DeviceHandle;
-		allocatorInfo.instance = this->InstanceHandle;
-		allocatorInfo.flags = 0;
-		if( this->BufferDeviceAddressExtension_.get() )
-			allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
-		CheckCall( vmaCreateAllocator( &allocatorInfo, &pDevice->MemoryAllocatorHandle ) );
-
-		// transfer the device to the Instance object
-		this->Device_ = std::move(pDevice);
-		return this->Device_.get();
+		LogDebug << "Adding needed extension: " << parameters.NeededExtensions[i] << LogEnd;
+		pThis->ExtensionList.push_back( parameters.NeededExtensions[i] );
 		}
 
-		//this->RenderExtent = SurfaceCapabilities.currentExtent;
+	// enable additional extensions
+	if( parameters.EnableDescriptorIndexingExtension )
+		{
+		pThis->BufferDeviceAddressExtension_ = unique_ptr<bdr::BufferDeviceAddressExtension>( new bdr::BufferDeviceAddressExtension( pThis.get() ) );
+		pThis->EnabledExtensions.push_back( pThis->BufferDeviceAddressExtension_.get() );
+		}
+	if( parameters.EnableDescriptorIndexingExtension )
+		{
+		pThis->DescriptorIndexingExtension_ = unique_ptr<bdr::DescriptorIndexingExtension>( new bdr::DescriptorIndexingExtension( pThis.get() ) );
+		pThis->EnabledExtensions.push_back( pThis->DescriptorIndexingExtension_.get() );
+		}
+	if( parameters.EnableRayTracingExtension )
+		{
+		pThis->RayTracingExtension_ = unique_ptr<bdr::RayTracingExtension>( new bdr::RayTracingExtension( pThis.get() ) );
+		pThis->EnabledExtensions.push_back( pThis->RayTracingExtension_.get() );
+		}
 
-		//// create an internal command pool that will be used for image transfer etc
-		//VkCommandPoolCreateInfo commandPoolCreateInfo{};
-		//commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		//commandPoolCreateInfo.queueFamilyIndex = PhysicalDeviceQueueGraphicsFamily;
-		//commandPoolCreateInfo.flags = 0;
-		//VLK_CALL( vkCreateCommandPool( this->Device, &commandPoolCreateInfo, nullptr, &this->InternalCommandPool ) );
+	// call all enabled extensions pre-create instance
+	for( auto ext : pThis->EnabledExtensions )
+		{
+		CheckCall( ext->CreateInstance( &instanceCreateInfo, &pThis->ExtensionList ) );
+		}
 
-		//// set up sync objects for rendering
-		//ImageAvailableSemaphores.resize( MaximumConcurrentRenderFrames );
-		//RenderFinishedSemaphores.resize( MaximumConcurrentRenderFrames );
-		//InFlightFences.resize( MaximumConcurrentRenderFrames );
+	// setup vulkan validation extension if wanted
+	VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfo{};
+	if( pThis->EnableValidation )
+		{
+		LogDebug << "Adding debugging utils extension: " VK_EXT_DEBUG_UTILS_EXTENSION_NAME << LogEnd;
 
-		//VkSemaphoreCreateInfo semaphoreCreateInfo{};
-		//semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-		//VkFenceCreateInfo fenceCreateInfo{};
-		//fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		//fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-		//for( uint i = 0; i < MaximumConcurrentRenderFrames; i++ )
-		//	{
-		//	VLK_CALL( vkCreateSemaphore( this->Device, &semaphoreCreateInfo, nullptr, &this->ImageAvailableSemaphores[i] ) );
-		//	VLK_CALL( vkCreateSemaphore( this->Device, &semaphoreCreateInfo, nullptr, &this->RenderFinishedSemaphores[i] ) );
-		//	VLK_CALL( vkCreateFence( this->Device, &fenceCreateInfo, nullptr, &this->InFlightFences[i] ) );
-		//	}
+		// add to extensions to enable
+		pThis->ExtensionList.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+
+		// add the validation layers
+		instanceCreateInfo.enabledLayerCount = static_cast<uint>( ValidationLayers.size() );
+		instanceCreateInfo.ppEnabledLayerNames = ValidationLayers.data();
+
+		// insert create info into create list
+		debugUtilsMessengerCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+		debugUtilsMessengerCreateInfo.messageSeverity = parameters.DebugMessageSeverityMask;
+		debugUtilsMessengerCreateInfo.messageType = parameters.DebugMessageTypeMask;
+		debugUtilsMessengerCreateInfo.pfnUserCallback = parameters.DebugMessageCallback;
+		debugUtilsMessengerCreateInfo.pNext = instanceCreateInfo.pNext;
+		instanceCreateInfo.pNext = &debugUtilsMessengerCreateInfo;
+		}
+
+	// create instance
+	instanceCreateInfo.enabledExtensionCount = static_cast<uint>( pThis->ExtensionList.size() );
+	instanceCreateInfo.ppEnabledExtensionNames = pThis->ExtensionList.data();
+	CheckCall( vkCreateInstance( &instanceCreateInfo, nullptr, &pThis->InstanceHandle ) );
+
+	// create debug messager
+	if( pThis->EnableValidation )
+		{
+		LogDebug << "Creating debug messenger" << LogEnd;
+		CheckCall( _vkCreateDebugUtilsMessengerEXT( pThis->InstanceHandle, &debugUtilsMessengerCreateInfo, nullptr, &pThis->DebugUtilsMessenger ) );
+		}
+
+	// call enabled extensions post-create
+	for( auto ext : pThis->EnabledExtensions )
+		{
+		CheckCall( ext->PostCreateInstance() );
+		}
+
+	return pThis;
+	}
+
+status_return<Device *> Instance::CreateDevice( const DeviceTemplate &parameters )
+	{
+	Validate( !this->Device_, status_code::already_initialized ) << "The Device object is already created" << ValidateEnd;
+	Validate( parameters.SurfaceHandle, status_code::invalid_param ) << "No SurfaceHandle specified" << ValidateEnd;
+
+	// create a device object 
+	auto pDevice = unique_ptr<bdr::Device>( new bdr::Device( this ) );
+
+	// copy the surface 
+	pDevice->SurfaceHandle = parameters.SurfaceHandle;
+
+	// retrieve all devices we can select from
+	uint deviceCount = 0;
+	CheckCall( vkEnumeratePhysicalDevices( this->InstanceHandle, &deviceCount, nullptr ) );
+	Validate( deviceCount > 0, status_code::not_found ) << "Could not find any device which has support for Vulkan" << ValidateEnd;
+	vector<VkPhysicalDevice> devices( deviceCount );
+	CheckCall( vkEnumeratePhysicalDevices( this->InstanceHandle, &deviceCount, devices.data() ) );
+
+	// fill in required extensions list, along with features and properties
+	pDevice->PhysicalDeviceFeatures = {};
+	pDevice->PhysicalDeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	pDevice->PhysicalDeviceProperties = {};
+	pDevice->PhysicalDeviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+	pDevice->DeviceExtensionList.clear();
+	pDevice->DeviceExtensionList.push_back( VK_KHR_SWAPCHAIN_EXTENSION_NAME );
+	for( auto ext : this->EnabledExtensions )
+		{
+		CheckCall( ext->AddRequiredDeviceExtensions(
+			&pDevice->PhysicalDeviceFeatures,
+			&pDevice->PhysicalDeviceProperties,
+			&pDevice->DeviceExtensionList
+		) );
+		}
+
+	// enumerate and look for a suitable device
+	bool found_device = false;
+	for( const auto &device : devices )
+		{
+		// try this physical device
+		pDevice->PhysicalDeviceHandle = device;
+
+		// check if it has the queue families needed
+		CheckRetValCall(
+			foundPhysicalDeviceQueueFamilies,
+			lookupPhysicalDeviceQueueFamilies(
+				pDevice->SurfaceHandle,
+				pDevice->PhysicalDeviceHandle,
+				pDevice->PhysicalDeviceQueueGraphicsFamily,
+				pDevice->PhysicalDeviceQueuePresentFamily
+			)
+		);
+		if( !foundPhysicalDeviceQueueFamilies )
+			continue;
+
+		// make sure all extensions are supported
+		CheckRetValCall(
+			allRequiredDeviceExtensionsAreSupported,
+			validatePhysicalDeviceRequiredExtensionsSupported(
+				pDevice->PhysicalDeviceHandle,
+				pDevice->DeviceExtensionList
+			)
+		);
+		if( !allRequiredDeviceExtensionsAreSupported )
+			continue;
+
+		// query capabilities and formats available
+		uint count = 0;
+		CheckCall( vkGetPhysicalDeviceSurfaceCapabilitiesKHR( device, pDevice->SurfaceHandle, &pDevice->SurfaceCapabilities ) );
+		CheckCall( vkGetPhysicalDeviceSurfaceFormatsKHR( device, pDevice->SurfaceHandle, &count, nullptr ) );
+		if( count > 0 )
+			{
+			pDevice->AvailableSurfaceFormats.resize( count );
+			CheckCall( vkGetPhysicalDeviceSurfaceFormatsKHR( device, pDevice->SurfaceHandle, &count, pDevice->AvailableSurfaceFormats.data() ) );
+			}
+		vkGetPhysicalDeviceSurfacePresentModesKHR( device, pDevice->SurfaceHandle, &count, nullptr );
+		if( count > 0 )
+			{
+			pDevice->AvailablePresentModes.resize( count );
+			CheckCall( vkGetPhysicalDeviceSurfacePresentModesKHR( device, pDevice->SurfaceHandle, &count, pDevice->AvailablePresentModes.data() ) );
+			}
+
+		// need at least one format and mode, so skip device if not available
+		if( pDevice->AvailableSurfaceFormats.empty()
+			|| pDevice->AvailablePresentModes.empty() )
+			continue;
+
+		// query device features as well
+		vkGetPhysicalDeviceFeatures2( device, &pDevice->PhysicalDeviceFeatures );
+		vkGetPhysicalDeviceProperties2( device, &pDevice->PhysicalDeviceProperties );
+
+		// need these features
+		if( !pDevice->PhysicalDeviceFeatures.features.samplerAnisotropy )
+			continue;
+		if( !pDevice->PhysicalDeviceFeatures.features.multiDrawIndirect )
+			continue;
+
+		// call enabled extensions to make sure they are supported
+		bool passed_all_extensions = true;
+		for( auto ext : this->EnabledExtensions )
+			{
+			if( !ext->SelectDevice(
+				pDevice->SurfaceCapabilities,
+				pDevice->AvailableSurfaceFormats,
+				pDevice->AvailablePresentModes,
+				pDevice->PhysicalDeviceFeatures,
+				pDevice->PhysicalDeviceProperties ) )
+				{
+				passed_all_extensions = false;
+				break;
+				}
+			}
+		if( !passed_all_extensions )
+			continue;
+
+		// all checks out, we found a device
+		found_device = true;
+		break;
+		}
+
+	// make sure we have found a device now
+	Validate( found_device, status_code::not_found ) << "No suitable physical device found." << ValidateEnd;
+
+	// setup device queues
+	vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos( 1 );
+	float queuePriority = 1.0f;
+	deviceQueueCreateInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	deviceQueueCreateInfos[0].queueFamilyIndex = pDevice->PhysicalDeviceQueueGraphicsFamily;
+	deviceQueueCreateInfos[0].queueCount = 1;
+	deviceQueueCreateInfos[0].pQueuePriorities = &queuePriority;
+	if( pDevice->PhysicalDeviceQueueGraphicsFamily != pDevice->PhysicalDeviceQueuePresentFamily )
+		{
+		// need and additional queue, as presentation and graphics are separate families
+		deviceQueueCreateInfos.resize( 2 );
+		deviceQueueCreateInfos[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		deviceQueueCreateInfos[1].queueFamilyIndex = pDevice->PhysicalDeviceQueuePresentFamily;
+		deviceQueueCreateInfos[1].queueCount = 1;
+		deviceQueueCreateInfos[1].pQueuePriorities = &queuePriority;
+		}
+
+	// additional features
+	VkPhysicalDeviceFeatures physicalDeviceFeatures{};
+	physicalDeviceFeatures.samplerAnisotropy = VK_TRUE;
+	physicalDeviceFeatures.multiDrawIndirect = VK_TRUE;
+
+	// device setup and creation + queues
+	VkDeviceCreateInfo deviceCreateInfo{};
+	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>( deviceQueueCreateInfos.size() );
+	deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfos.data();
+	deviceCreateInfo.pEnabledFeatures = &physicalDeviceFeatures;
+	deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>( pDevice->DeviceExtensionList.size() );
+	deviceCreateInfo.ppEnabledExtensionNames = pDevice->DeviceExtensionList.data();
+
+	// add creation for extensions
+	for( auto ext : this->EnabledExtensions )
+		{
+		CheckCall( ext->CreateDevice( &deviceCreateInfo ) );
+		}
+	if( this->EnableValidation )
+		{
+		deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>( ValidationLayers.size() );
+		deviceCreateInfo.ppEnabledLayerNames = ValidationLayers.data();
+		}
+	else
+		{
+		deviceCreateInfo.enabledLayerCount = 0;
+		}
+
+	CheckCall( vkCreateDevice( pDevice->PhysicalDeviceHandle, &deviceCreateInfo, nullptr, &pDevice->DeviceHandle ) );
+	vkGetDeviceQueue( pDevice->DeviceHandle, pDevice->PhysicalDeviceQueueGraphicsFamily, 0, &pDevice->GraphicsQueueHandle );
+	vkGetDeviceQueue( pDevice->DeviceHandle, pDevice->PhysicalDeviceQueuePresentFamily, 0, &pDevice->PresentQueueHandle );
+
+	// post create call extensions
+	for( auto ext : this->EnabledExtensions )
+		{
+		CheckCall( ext->PostCreateDevice() );
+		}
+
+	// set up the memory allocator in the device
+	VmaAllocatorCreateInfo allocatorInfo = {};
+	allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_3;
+	allocatorInfo.physicalDevice = pDevice->PhysicalDeviceHandle;
+	allocatorInfo.device = pDevice->DeviceHandle;
+	allocatorInfo.instance = this->InstanceHandle;
+	allocatorInfo.flags = 0;
+	if( this->BufferDeviceAddressExtension_.get() )
+		allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+	CheckCall( vmaCreateAllocator( &allocatorInfo, &pDevice->MemoryAllocatorHandle ) );
+
+	// transfer the device to the Instance object
+	this->Device_ = std::move( pDevice );
+	return this->Device_.get();
+	}
+
+//this->RenderExtent = SurfaceCapabilities.currentExtent;
+
+//// create an internal command pool that will be used for image transfer etc
+//VkCommandPoolCreateInfo commandPoolCreateInfo{};
+//commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+//commandPoolCreateInfo.queueFamilyIndex = PhysicalDeviceQueueGraphicsFamily;
+//commandPoolCreateInfo.flags = 0;
+//VLK_CALL( vkCreateCommandPool( this->Device, &commandPoolCreateInfo, nullptr, &this->InternalCommandPool ) );
+
+//// set up sync objects for rendering
+//ImageAvailableSemaphores.resize( MaximumConcurrentRenderFrames );
+//RenderFinishedSemaphores.resize( MaximumConcurrentRenderFrames );
+//InFlightFences.resize( MaximumConcurrentRenderFrames );
+
+//VkSemaphoreCreateInfo semaphoreCreateInfo{};
+//semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+//VkFenceCreateInfo fenceCreateInfo{};
+//fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+//fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+//for( uint i = 0; i < MaximumConcurrentRenderFrames; i++ )
+//	{
+//	VLK_CALL( vkCreateSemaphore( this->Device, &semaphoreCreateInfo, nullptr, &this->ImageAvailableSemaphores[i] ) );
+//	VLK_CALL( vkCreateSemaphore( this->Device, &semaphoreCreateInfo, nullptr, &this->RenderFinishedSemaphores[i] ) );
+//	VLK_CALL( vkCreateFence( this->Device, &fenceCreateInfo, nullptr, &this->InFlightFences[i] ) );
+//	}
 
 //
 //#include "bdr_Common.inl"
@@ -1460,4 +1461,5 @@ namespace bdr
 //	}
 //
 
-	}
+}
+//namespace bdr

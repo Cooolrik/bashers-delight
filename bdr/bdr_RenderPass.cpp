@@ -11,9 +11,11 @@
 namespace bdr
 {
 
-RenderPass::RenderPass( Device* _module ) : DeviceSubmodule( _module ) 
-	{
-	}
+RenderPass::RenderPass( Device *_module ) 
+	: DeviceSubmodule( _module )
+	, RenderPassHandle(_RenderPassHandle)
+	, Template(_Template)
+	{}
 
 RenderPass::~RenderPass()
 	{
@@ -30,7 +32,7 @@ status RenderPass::Setup( const RenderPassTemplate &parameters )
 
 	// setup the descriptor structures
 	vector<VkSubpassDescription> subpassDescriptions( subpassCount );
-	for( size_t subpassInx=0; subpassInx<subpassCount; ++subpassInx )
+	for( size_t subpassInx = 0; subpassInx < subpassCount; ++subpassInx )
 		{
 		auto &colorAttachments = parameters.subpassDescriptions[subpassInx].colorAttachments;
 		auto &depthAttachmentReference = parameters.subpassDescriptions[subpassInx].depthStencilAttachment;
@@ -54,10 +56,10 @@ status RenderPass::Setup( const RenderPassTemplate &parameters )
 	renderPassCreateInfo.pSubpasses = subpassDescriptions.data();
 	renderPassCreateInfo.dependencyCount = (uint32_t)parameters.subpassDependencies.size();
 	renderPassCreateInfo.pDependencies = parameters.subpassDependencies.data();
-	CheckCall( vkCreateRenderPass( this->Module->GetDeviceHandle(), &renderPassCreateInfo, nullptr, &this->RenderPassHandle ) );
+	CheckCall( vkCreateRenderPass( this->Module->GetDeviceHandle(), &renderPassCreateInfo, nullptr, &this->_RenderPassHandle ) );
 
 	// copy the template
-	this->Template = std::make_unique<RenderPassTemplate>( parameters );
+	this->_Template = std::make_unique<RenderPassTemplate>(parameters);
 
 	return status::ok;
 	}
@@ -66,27 +68,27 @@ status RenderPass::Cleanup()
 	{
 	if( this->RenderPassHandle != nullptr )
 		{
-		vkDestroyRenderPass( this->GetModule()->GetDeviceHandle(), this->RenderPassHandle, nullptr );
-		this->RenderPassHandle = nullptr;
+		vkDestroyRenderPass( this->GetModule()->GetDeviceHandle(), this->_RenderPassHandle, nullptr );
+		this->_RenderPassHandle = nullptr;
 		}
-	this->Template.reset();
+	this->_Template.reset();
 
 	return status::ok;
 	}
 
 RenderPassTemplate RenderPassTemplate::SingleSubPass( VkFormat colorAttachmentFormat, VkFormat depthAttachmentFormat, VkSampleCountFlagBits samples )
 	{
-	const vector<VkFormat> colorAttachmentFormats = {colorAttachmentFormat};
+	const vector<VkFormat> colorAttachmentFormats = { colorAttachmentFormat };
 	return SingleSubPass( colorAttachmentFormats, depthAttachmentFormat, samples );
 	}
 
 RenderPassTemplate RenderPassTemplate::SingleSubPass( const vector<VkFormat> &colorAttachmentFormats, VkFormat depthAttachmentFormat, VkSampleCountFlagBits samples )
 	{
 	RenderPassTemplate ret = {};
-	
+
 	// attachments, depth added at the end
 	ret.attachmentDescriptions.resize( colorAttachmentFormats.size() + 1 );
-	for( size_t inx=0; inx<colorAttachmentFormats.size() + 1; ++inx )
+	for( size_t inx = 0; inx < colorAttachmentFormats.size() + 1; ++inx )
 		{
 		auto &desc = ret.attachmentDescriptions[inx];
 
@@ -109,14 +111,14 @@ RenderPassTemplate RenderPassTemplate::SingleSubPass( const vector<VkFormat> &co
 		desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		}
-	
+
 	// add the one subpass
-	ret.subpassDescriptions.resize(1);
+	ret.subpassDescriptions.resize( 1 );
 	auto &subpassDescription = ret.subpassDescriptions[0];
-	
+
 	// color attachments
-	subpassDescription.colorAttachments.resize(colorAttachmentFormats.size());
-	for( size_t inx=0; inx<colorAttachmentFormats.size(); ++inx )
+	subpassDescription.colorAttachments.resize( colorAttachmentFormats.size() );
+	for( size_t inx = 0; inx < colorAttachmentFormats.size(); ++inx )
 		{
 		subpassDescription.colorAttachments[inx].attachment = (uint32_t)inx;
 		subpassDescription.colorAttachments[inx].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -128,7 +130,7 @@ RenderPassTemplate RenderPassTemplate::SingleSubPass( const vector<VkFormat> &co
 	subpassDescription.depthStencilAttachment.value().layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 	// add the one subpass dependency
-	ret.subpassDependencies.resize(1);
+	ret.subpassDependencies.resize( 1 );
 	auto &subpassDependency = ret.subpassDependencies[0];
 
 	subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -140,4 +142,6 @@ RenderPassTemplate RenderPassTemplate::SingleSubPass( const vector<VkFormat> &co
 
 	return ret;
 	}
-};
+
+}
+//namespace bdr

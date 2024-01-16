@@ -10,33 +10,35 @@ namespace bdr
 {
 using ctle::readers_writer_lock;
 
+// The MultithreadPoolTemplate is used to create a multithread pool, a pool of objects which
+// can be shared by multiple threads. The objects are assumed to be expensive to allocate or
+// have allocated, so it makes more sense to share them among multiple threads/jobs, instead
+// of having one pool per thread.
 template<class _Ty, class _ModuleTy>
 class MultithreadPoolTemplate : public SubmoduleTemplate<_ModuleTy>
 	{
 	public:
 		~MultithreadPoolTemplate()
-			{
-			}
+			{}
 
 	private:
 		// the access mutex
 		readers_writer_lock accessLock;
 
 		// the available pool of objects
-		vector<unique_ptr<_Ty>> available; 
+		vector<unique_ptr<_Ty>> available;
 
 		// currently locked objects (not in the available pool)
-		unordered_map<const _Ty*,unique_ptr<_Ty>> locked;
+		unordered_map<const _Ty *, unique_ptr<_Ty>> locked;
 
 	protected:
-		MultithreadPoolTemplate( _ModuleTy* _module ) : SubmoduleTemplate(_module)
-			{
-			}
+		MultithreadPoolTemplate( _ModuleTy *_module ) : SubmoduleTemplate( _module )
+			{}
 
 		// this method is assumed to only be called on setup, so is not guarded
 		void SetupPool( vector<unique_ptr<_Ty>> &objectList )
 			{
-			this->available = std::move(objectList);
+			this->available = std::move( objectList );
 			}
 
 		// clears the pool, and returns all objects back to the caller
@@ -51,23 +53,23 @@ class MultithreadPoolTemplate : public SubmoduleTemplate<_ModuleTy>
 			if( !locked.empty() )
 				{
 				// log a warning
-				if( ctle::log_level::warning <= ctle::get_global_log_level() ) 
+				if( ctle::log_level::warning <= ctle::get_global_log_level() )
 					{
-					ctle::log_msg _ctle_log_entry(ctle::log_level::warning,__FILE__,__LINE__,"MultithreadPoolTemplate::Cleanup"); 
-					_ctle_log_entry.message() << "When calling ClearPool, all locked items should have already been returned, but locked object set still has " << locked.size() << " items."; 
+					ctle::log_msg _ctle_log_entry( ctle::log_level::warning, __FILE__, __LINE__, "MultithreadPoolTemplate::Cleanup" );
+					_ctle_log_entry.message() << "When calling ClearPool, all locked items should have already been returned, but locked object set still has " << locked.size() << " items.";
 					}
 
 				// move all objects from locked to objectList, and clear locked
-				for( auto it = locked.begin() ; it != locked.end() ; ++it )
+				for( auto it = locked.begin(); it != locked.end(); ++it )
 					{
-					objectList.emplace_back( std::move(it->second) );
+					objectList.emplace_back( std::move( it->second ) );
 					}
 				locked.clear();
 				}
 			}
 
 		// returns true if there is an object available
-		bool ItemIsAvailable() 
+		bool ItemIsAvailable()
 			{
 			readers_writer_lock::read_guard guard( this->accessLock );
 
@@ -78,13 +80,13 @@ class MultithreadPoolTemplate : public SubmoduleTemplate<_ModuleTy>
 		status_return<_Ty *> AcquireItem()
 			{
 			readers_writer_lock::write_guard guard( this->accessLock );
-			
+
 			if( available.empty() )
 				return status::not_initialized;
 
 			// move the last available item into the locked set
 			_Ty *ret = this->available.back().get();
-			this->locked.emplace( ret, std::move(this->available.back()) );
+			this->locked.emplace( ret, std::move( this->available.back() ) );
 			this->available.pop_back();
 
 			return ret;
@@ -96,12 +98,12 @@ class MultithreadPoolTemplate : public SubmoduleTemplate<_ModuleTy>
 			readers_writer_lock::write_guard guard( this->accessLock );
 
 			// check that we have the item
-			auto it = this->locked.find(item);
+			auto it = this->locked.find( item );
 			if( it == this->locked.end() )
 				return status::not_found;
 
 			// found, return to available list
-			this->available.emplace_back( std::move(it->second) );
+			this->available.emplace_back( std::move( it->second ) );
 			this->locked.erase( it );
 
 			return status::ok;
@@ -109,4 +111,5 @@ class MultithreadPoolTemplate : public SubmoduleTemplate<_ModuleTy>
 
 	};
 
-};
+}
+//namespace bdr

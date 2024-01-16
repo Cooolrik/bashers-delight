@@ -4,95 +4,111 @@
 #pragma once
 
 #include "bdr_Device.h"
-#include "bdr_Image.h"
 #include "bdr_MultithreadPool.h"
 
-namespace bdr 
+namespace bdr
+{
+
+class Framebuffer
 	{
-	class Framebuffer
-		{
-		public:
-			// the image objects of the framebuffer
-			vector<unique_ptr<Image>> images;
+	public:
+		Framebuffer();
+		~Framebuffer();
 
-			// the vulkan framebuffer handle
-			VkFramebuffer framebufferHandle;
+		// the image objects of the framebuffer
+		vector<unique_ptr<Image>> images;
 
-			// a semaphore object which can be used to signal render finish
-			VkSemaphore semaphoreHandle;
-		};
+		// the vulkan framebuffer handle
+		VkFramebuffer framebufferHandle;
 
-	// FramebufferPool keeps a number of frame buffers. Each framebuffer has a number of images attached, in a common setup.
-	class FramebufferPool : public MultithreadPoolTemplate<Framebuffer,Device>
-		{
-		public:
-			~FramebufferPool();
+		// a semaphore object which can be used to signal render finish
+		VkSemaphore semaphoreHandle;
+	};
 
-		private:
-			friend status_return<unique_ptr<FramebufferPool>> Device::CreateObject<FramebufferPool,FramebufferPoolTemplate>( const FramebufferPoolTemplate &parameters );
-			FramebufferPool( Device* _module );
-			status Setup( const FramebufferPoolTemplate& parameters );
+// FramebufferPool keeps a number of frame buffers. Each framebuffer has a number of images attached, in a common setup.
+class FramebufferPool : public MultithreadPoolTemplate<Framebuffer, Device>
+	{
+	public:
+		~FramebufferPool();
 
-			// surface formats of the images, and count of vector defines the number of images in each framebuffer
-			vector<VkFormat> ImageFormats;
+	private:
+		friend status_return<unique_ptr<FramebufferPool>> Device::CreateObject<FramebufferPool, FramebufferPoolTemplate>( const FramebufferPoolTemplate &parameters );
+		FramebufferPool( Device *_module );
+		status Setup( const FramebufferPoolTemplate &parameters );
 
-			// the size of the framebuffers in the pool
-			VkExtent2D ImagesExtent;
+		// surface formats of the images, and count of vector defines the number of images in each framebuffer
+		vector<VkFormat> ImageFormats;
 
-		public:
-			// explicitly cleanups the object, and also clears all objects owned by it
-			status Cleanup();
+		// the size of the framebuffers in the pool
+		VkExtent2D ImagesExtent;
 
-			// get the number of images per framebuffer
-			size_t GetImagesPerFramebuffer() const { return this->ImageFormats.size(); }
+	public:
+		// explicitly cleanups the object, and also clears all objects owned by it
+		status Cleanup();
 
-			// get the format of a specific image in a framebuffer
-			VkFormat GetImageFormat( size_t index ) const { return this->ImageFormats[index]; }
+		// get the number of images per framebuffer
+		size_t GetImagesPerFramebuffer() const
+			{
+			return this->ImageFormats.size();
+			}
 
-			// get the allocated extents of a frambuffer in the pool
-			VkExtent2D GetImagesExtent() const { return this->ImagesExtent; }
+		// get the format of a specific image in a framebuffer
+		VkFormat GetImageFormat( size_t index ) const
+			{
+			return this->ImageFormats[index];
+			}
 
-			// returns true if a framebuffer is available to be acquired from the pool
-			bool FramebufferIsAvailable() { return this->ItemIsAvailable(); }
+		// get the allocated extents of a frambuffer in the pool
+		VkExtent2D GetImagesExtent() const
+			{
+			return this->ImagesExtent;
+			}
 
-			// acquire a framebuffer from the pool
-			status_return<const Framebuffer *> AcquireFramebuffer();
+		// returns true if a framebuffer is available to be acquired from the pool
+		bool FramebufferIsAvailable()
+			{
+			return this->ItemIsAvailable();
+			}
 
-			// return a framebuffer to the pool
-			status ReturnFramebuffer( const Framebuffer *framebuffer );
+		// acquire a framebuffer from the pool
+		status_return<const Framebuffer *> AcquireFramebuffer();
 
-		};
-
-	// FramebufferPool creation template
-	class FramebufferPoolTemplate
-		{
-		public:
-			// the number of Framebuffers to be created in the pool
-			// Note: all framebuffers in the pool share the same layout
-			size_t framebuffersCount = 1;
-
-			// the extent in pixels of each of the images and framebuffers in the pool
-			VkExtent2D extent = {};
-
-			// image setup of each framebuffer
-			class ImageSetup
-				{
-				public:
-					VkFormat format;
-					VkSampleCountFlagBits samples;
-				};
-			vector<ImageSetup> imageSetups;
-
-			// the render pass to use for the framebuffer
-			const RenderPass *renderPass = nullptr;
-
-			// the command pool to use for the setup process
-			CommandPool *commandPool = nullptr;
-
-			/////////////////////////////////
-
-			// make a framebuffer pool that has the same setup as a renderpass' attachments
-			static status_return<FramebufferPoolTemplate> FromRenderPass( size_t framebuffersCount, uint32_t width, uint32_t height, const RenderPass *renderPass, CommandPool *commandPool );
-		};
+		// return a framebuffer to the pool
+		status ReturnFramebuffer( const Framebuffer *framebuffer );
 
 	};
+
+// FramebufferPool creation template
+class FramebufferPoolTemplate
+	{
+	public:
+		// the number of Framebuffers to be created in the pool
+		// Note: all framebuffers in the pool share the same layout
+		size_t framebuffersCount = 1;
+
+		// the extent in pixels of each of the images and framebuffers in the pool
+		VkExtent2D extent = {};
+
+		// image setup of each framebuffer
+		class ImageSetup
+			{
+			public:
+				VkFormat format;
+				VkSampleCountFlagBits samples;
+			};
+		vector<ImageSetup> imageSetups;
+
+		// the render pass to use for the framebuffer
+		const RenderPass *renderPass = nullptr;
+
+		// the command pool to use for the setup process
+		CommandPool *commandPool = nullptr;
+
+		/////////////////////////////////
+
+		// make a framebuffer pool that has the same setup as a renderpass' attachments
+		static status_return<FramebufferPoolTemplate> FromRenderPass( size_t framebuffersCount, uint32_t width, uint32_t height, const RenderPass *renderPass, CommandPool *commandPool );
+	};
+
+}
+// namespace bdr
