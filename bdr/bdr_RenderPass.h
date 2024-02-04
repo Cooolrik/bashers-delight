@@ -65,7 +65,6 @@ class RenderPassTemplate
 		/////////////////////////////////
 
 		// create a render pass with a single subpass, with colors and depth output
-		static RenderPassTemplate SingleSubPass( VkFormat colorAttachmentFormat, VkFormat depthAttachmentFormat, VkSampleCountFlagBits samples );
 		static RenderPassTemplate SingleSubPass( const vector<VkFormat> &colorAttachmentFormats, VkFormat depthAttachmentFormat, VkSampleCountFlagBits samples );
 	};
 

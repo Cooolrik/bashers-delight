@@ -13,13 +13,6 @@ class Swapchain : public DeviceSubmodule
 	public:
 		~Swapchain();
 
-		class Image
-			{
-			public:
-				VkSemaphore imageAvailableSemaphore;
-				VkFence imageAvailableFence;
-			};
-
 	private:
 		friend status_return<unique_ptr<Swapchain>> Device::CreateObject<Swapchain, SwapchainTemplate>( const SwapchainTemplate &parameters );
 		Swapchain( Device *_module );
